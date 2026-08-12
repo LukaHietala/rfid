@@ -3,5 +3,5 @@ def read_data(reader):
     return id, data.strip()
 
 def write_data(reader, data):
-    reader.write(data)
-    return data
+    id, written = reader.write(data)
+    return id, written

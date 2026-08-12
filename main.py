@@ -4,6 +4,7 @@ from mfrc522 import SimpleMFRC522
 import random
 
 from rfid import read_data, write_data
+from db import log_scan
 
 def main():
     reader = SimpleMFRC522()
@@ -26,13 +27,17 @@ def main():
             last_tag["id"] = id
             last_tag["last_scanned"] = now
 
-            new_name = random.choice(["Jaakko", "Tero", "Leo"])
-            write_data(reader, new_name)
+            if not data or not id:
+                continue
+
+            log_scan(id, data)
 
             print("ID: %s\nText: %s" % (id,data))
             time.sleep(0.5)
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print(str(e))
     finally:
         GPIO.cleanup()
 
