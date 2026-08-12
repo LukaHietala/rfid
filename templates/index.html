@@ -1,3 +1,12 @@
+<h2>Students</h2>
+{% for student in students %}
+    {{ student.id }}
+    {{ student.rfid_id }}
+    {{ student.name }}
+    {{ student.status }}
+{% endfor %}
+
+<h2>Scans</h2>
 {% for scan in scans %}
     {{ scan.rfid_id }}
     {{ scan.name }}
@@ -10,4 +19,8 @@
     socket.on('connect', function() {
         socket.emit('test', {data: 'connected!!!!'});
     });
+    
+    socket.on('new_scan', (data) => {
+        console.log("mirri", data)
+    })
 </script>

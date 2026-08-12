@@ -21,7 +21,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             rfid_id TEXT NOT NULL,
             name TEXT NOT NULL,
-            status TEXT NOT NULL,
+            status TEXT CHECK( status IN ('IN','OUT') )   NOT NULL DEFAULT 'OUT',
             created_at TEXT NOT NULL
         )
     """)
@@ -68,6 +68,70 @@ def get_scans(limit=1000):
     con.close()
 
     return [dict(row) for row in rows]
+
+def get_students(limit=1000):
+    con = sqlite3.connect(DB_NAME)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM students
+        LIMIT ?
+    """, (limit,))
+
+    rows = cur.fetchall()
+    con.close()
+
+    return [dict(row) for row in rows]
+
+def get_student(rfid_id):
+    con = sqlite3.connect(DB_NAME)
+    cur = con.cursor()
+    
+    cur.execute("""
+        SELECT *
+        FROM students
+        WHERE rfid_id = ?
+    """, (str(rfid_id),))
+
+    student = cur.fetchone()
+
+    con.close()
+    return student
+
+def toggle_student_status(rfid_id):
+    con = sqlite3.connect(DB_NAME)
+    cur = con.cursor()
+
+    cur.execute("""
+        SELECT status
+        FROM students
+        WHERE rfid_id = ?
+    """, (str(rfid_id),))
+
+    res = cur.fetchone()
+
+    if not res:
+        con.commit()
+        con.close()
+        return
+    
+    status = res[0]
+    
+    if status == "IN":
+        status = "OUT"
+    else:
+        status = "IN"
+    
+    cur.execute("""
+        UPDATE students
+    	SET status = ?
+        WHERE rfid_id = ?
+    """, (status, str(rfid_id),))
+
+    con.commit()
+    con.close()
 
 if __name__ == "__main__":
     init_db()
