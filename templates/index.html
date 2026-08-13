@@ -1,26 +1,42 @@
 <h2>Students</h2>
-{% for student in students %}
-    {{ student.id }}
-    {{ student.rfid_id }}
-    {{ student.name }}
-    {{ student.status }}
-{% endfor %}
-
-<h2>Scans</h2>
-{% for scan in scans %}
-    {{ scan.rfid_id }}
-    {{ scan.name }}
-{% endfor %}
-
+<table>
+	<tr>
+		<th>Name</th>
+		<th>Status</th>
+	</tr>
+	{% for student in students %}
+	<tr>
+		<td>{{ student.name }}</td>
+		<td id="{{ student.rfid_id }}">{{ student.status }}</td>
+	</tr>
+	{% endfor %}
+</table>
+	
 <script type="module">
     import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
 
-    const socket = io();
+    const socket = io()
     socket.on('connect', function() {
         socket.emit('test', {data: 'connected!!!!'});
     });
     
     socket.on('new_scan', (data) => {
-        console.log("mirri", data)
+		const name = data.name;
+		const id = data.rfid_id;
+		const status = data.status;
+		// Update table
+		document.getElementById(id).textContent = status;
+		// Create popup about new scan
+		const div = document.createElement("div");
+		const newContent = document.createTextNode(`New scan: ${name} at ${id}`);
+		div.style.position = "fixed";
+		div.style.right = "50px";
+		div.style.top = "50px";
+		div.append(newContent);
+		document.body.appendChild(div);
+
+		setTimeout(function() {
+			document.body.removeChild(div);
+		}, 5000);
     })
 </script>

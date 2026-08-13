@@ -37,10 +37,10 @@ def start_logger(new_scan):
                 continue
 
             log_scan(id, data)
-            new_scan({"name" : data, "rfid_id" : id})
             toggle_student_status(id)
             student = get_student(id)
             if student:
+                new_scan({"name" : data, "rfid_id" : id, "status" : student[3]})
                 print("Found student:", student)
             else:
                 print("Student not found based on tag")
