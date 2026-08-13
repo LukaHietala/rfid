@@ -1,7 +1,18 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta, date, time
+from dateutil.relativedelta import relativedelta
+import numpy as np
 
 DB_NAME = "rfid.db"
+
+# Source - https://stackoverflow.com/a/9538363
+# Posted by bbengfort, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-08-13, License - CC BY-SA 3.0
+
+def dict_from_row(row):
+    if not row:
+        return
+    return dict(zip(row.keys(), row))       
 
 def init_db():
     con = sqlite3.connect(DB_NAME)
@@ -22,13 +33,18 @@ def init_db():
             rfid_id TEXT NOT NULL,
             name TEXT NOT NULL,
             status TEXT CHECK( status IN ('IN','OUT') )   NOT NULL DEFAULT 'OUT',
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            done_seconds INTEGER NOT NULL DEFAULT 0,
+            weekmask TEXT NOT NULL
         )
     """)
 
 
 
-    # monta päivää pitää olla töissä
     # millä aikavälillä? 1.8.2026 - 30.8.2026
     # kauan per päivä.
     # kauan vielä pitää tehdä töitä, joka työpäivä lisätään esim 7 tuntia
@@ -87,6 +103,7 @@ def get_students(limit=1000):
 
 def get_student(rfid_id):
     con = sqlite3.connect(DB_NAME)
+    con.row_factory = sqlite3.Row
     cur = con.cursor()
     
     cur.execute("""
@@ -98,7 +115,37 @@ def get_student(rfid_id):
     student = cur.fetchone()
 
     con.close()
-    return student
+    return dict_from_row(student)
+
+def get_student_remaining(student):
+    done_seconds = student["done_seconds"]
+    day_starts_str = student["start_time"]
+    day_ends_str = student["end_time"]
+    start_date_str = student["start_date"] 
+    end_date_str = student["end_date"]
+    weekmask = student["weekmask"]
+
+    done_time = timedelta(seconds=done_seconds)
+    day_starts_time = datetime.strptime(day_starts_str, "%H.%M").time()
+    day_ends_time = datetime.strptime(day_ends_str, "%H.%M").time()
+
+    day_length = datetime.combine(date.today(), day_ends_time) - datetime.combine(date.today(), day_starts_time)
+
+    date_format = '%Y-%m-%d %H:%M:%S'
+
+    start_date = datetime.strptime(start_date_str, date_format)
+    end_date = datetime.strptime(end_date_str, date_format)
+
+    current_date = datetime.now()
+
+    business_days = np.busday_count(
+        np.datetime64(start_date.date(), "D"),
+        np.datetime64(min(current_date.date(), end_date.date()), "D") + np.timedelta64(1, "D"),
+        weekmask=weekmask
+    )
+
+    return (((datetime.combine(date.today(), current_date.time()) - datetime.combine(date.today(), day_starts_time))) + (day_length * (business_days - 1)) - done_time).total_seconds()
+
 
 def toggle_student_status(rfid_id):
     con = sqlite3.connect(DB_NAME)

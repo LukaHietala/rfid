@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Admin</title>
+	</head>
+	<body>
+		<h1>Students</h1>
+		<table>
+			<tr>id</tr>
+			<tr>rfid_id</tr>
+			<tr>name</tr>
+			<tr>status</tr>
+			
+			<tr>created_at</tr>
+			<tr>start_at</tr>
+			<tr>end_date</tr>
+			<tr>start_time</tr>
+			<tr>end_time</tr>
+			<tr>done_seconds</tr>
+			<tr>weekmask</tr>
+			{% for student in students %}
+			<tr>
+				<td>{{ student.id }}</td>
+				<td>{{ student.rfid_id }}</td>
+				<td>{{ student.name }}</td>
+				<td>{{ student.status }}</td>
+				
+				<td>{{ student.created_at }}</td>
+				<td>{{ student.start_date }}</td>
+				<td>{{ student.end_date }}</td>
+				<td>{{ student.start_time }}</td>
+				<td>{{ student.end_time }}</td>
+				<td>{{ student.done_seconds }}</td>
+				<td>{{ student.weekmask }}</td>
+			</tr>
+			{% endfor %}
+		</table>
+	</body>
+</html

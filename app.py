@@ -35,6 +35,12 @@ def index():
 
     return render_template('index.html', scans=scans, students=students)
 
+@app.route("/admin")
+def admin():
+    students = get_students()
+
+    return render_template('admin.html', students=students)
+
 @socketio.on('test')
 def test(json):
     print('asfdsadf ' + str(json))

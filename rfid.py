@@ -4,7 +4,7 @@ import random
 import RPi.GPIO as GPIO
 from mfrc522 import SimpleMFRC522
 
-from db import log_scan, get_student, toggle_student_status
+from db import log_scan, get_student, toggle_student_status, get_student_remaining
 
 def read_data(reader):
     id, data = reader.read()
@@ -40,9 +40,12 @@ def start_logger(new_scan):
             toggle_student_status(id)
             student = get_student(id)
             if student:
-                new_scan({"name" : data, "rfid_id" : id, "status" : student[3]})
+                new_scan({"name" : data, "rfid_id" : id, "status" : student["status"]})
+                #remaining = get_student_remaining(student)
+                #print(remaining)
                 print("Found student:", student)
             else:
+                new_scan({"rfid_id" : id, msg : "Could not find student based on id" })
                 print("Student not found based on tag")
 
             time.sleep(0.5)

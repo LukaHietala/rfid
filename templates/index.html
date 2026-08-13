@@ -10,7 +10,7 @@
 		<td id="{{ student.rfid_id }}">{{ student.status }}</td>
 	</tr>
 	{% endfor %}
-</table>
+</table> 
 	
 <script type="module">
     import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
@@ -23,7 +23,7 @@
     socket.on('new_scan', (data) => {
 		const name = data.name;
 		const id = data.rfid_id;
-		const status = data.status;
+		cponst status = data.status;
 		// Update table
 		document.getElementById(id).textContent = status;
 		// Create popup about new scan
