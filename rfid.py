@@ -4,8 +4,7 @@ import random
 import RPi.GPIO as GPIO
 from mfrc522 import SimpleMFRC522
 
-from db import log_scan, get_student, toggle_student_status
-from student import get_student_remaining
+from db import log_scan, get_student, toggle_student_status, get_student_remaining
 
 def read_tag(reader):
     id, data = reader.read()
@@ -40,9 +39,9 @@ def start_logger(new_scan):
             student = get_student(rfid_id)
 
             if student:
-                toggle_student_status(student["id"])
+                new_status = toggle_student_status(student["id"])
                 log_scan(student["rfid_id"], student["name"])
-                new_scan({"found" : True , "name" : student["name"], "rfid_id" : student["rfid_id"], "status" : student["status"]})
+                new_scan({"found" : True , "name" : student["name"], "rfid_id" : student["rfid_id"], "status" : new_status})
                 
                 remaining = get_student_remaining(student)
                 print("Remaining", remaining / 3600)

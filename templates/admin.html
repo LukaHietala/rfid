@@ -62,23 +62,26 @@
 			<label for="erfid_id">RFID_ID</label><br>
 			<input type="text" id="erfid_id" disabled><br>
 			<label for="ename">name</label><br>
-			<input type="text" id="ename"><br>
+			<input type="text" id="ename"><br>			
 			<label for="estatus">status</label><br>
-			<input type="text" id="estatus"><br>
+			<select id="estatus">
+				<option value="OUT">IN</option>
+				<option value="IN">OUT</option>
+			</select><br>
 			<label for="ecreatedat">created_at</label><br>
 			<input type="text" id="ecreatedat" disabled><br>
 			<label for="estartdate">start_date</label><br>
-			<input type="text" id="estartdate"><br>
+			<input type="date" id="estartdate"><br>
 			<label for="eenddate">end_date</label><br>
-			<input type="text" id="eenddate"><br>
+			<input type="date" id="eenddate"><br>
 			<label for="estarttime">start_time</label><br>
-			<input type="text" id="estarttime"><br>
+			<input type="time" id="estarttime"><br>
 			<label for="eendtime">end_time</label><br>
-			<input type="text" id="eendtime"><br>
+			<input type="time" id="eendtime"><br>
 			<label for="edoneseconds">done_seconds</label><br>
 			<input type="text" id="edoneseconds"><br>
 			<label for="eweekmask">weekmask</label><br>
-			<input type="text" id="eweekmask"><br>
+			<input type="text" id="eweekmask" pattern='[0,1]{7}'><br>
 			<button type="submit">Muokkaa</button>
 		</form>
 	</body>
@@ -92,7 +95,7 @@
 		socket.on('new_scan', (data) => {
 			const id = data.rfid_id;
 			const in_database = data.found;
-			if (in_database) {
+			if (in_database) {				
 				const name = data.name;
 				popup(`${id} is already in the database as ${name}`);
 			} else {
@@ -107,8 +110,8 @@
 			popup(`RFID_ID: ${rfid_id} added to table as ${name}`);
 		});
 
-		const form = document.getElementById('add');
-		form.addEventListener('submit', (event) => {
+		const addForm = document.getElementById('add');
+		addForm.addEventListener('submit', (event) => {
 			event.preventDefault();
 			const name = document.getElementById('name').value;
 			const rfid_id = document.getElementById('rfid_id').value;
@@ -116,8 +119,24 @@
 			return false;
 		});
 
+		function jsTimeToSQL(jstime) {
+			return ((jstime[0] == "0") ? jstime.slice(-4) : jstime).replace(":", ".")
+		}
+		function SQLTimeToJs(sqltime) {
+			return ((sqltime.length == 4) ? "0" : "") + (sqltime.replace(".", ":"));
+		}
+		function jsDateToSQL(jsdate, jstime) {
+			return `${jsdate.split("-").reverse().join(".")} ${jstime}:00`;
+		}
+		function SQLDateToJs(sqldate) {
+			return (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().join("-")
+		}
+		
 		// Add events to buttons
 		Array.from(document.querySelectorAll("button")).map((button) => {
+			if (button.dataset.id == undefined) {
+				return;
+			}
 			button.addEventListener("click", () => {
 				// Get info
 				const id = button.dataset.id;
@@ -137,13 +156,40 @@
 				document.getElementById("ename").value = name;
 				document.getElementById("estatus").value = status;
 				document.getElementById("ecreatedat").value = created_at;
-				document.getElementById("estartdate").value = start_date;
-				document.getElementById("eenddate").value = end_date;
-				document.getElementById("estarttime").value = start_time;
-				document.getElementById("eendtime").value = end_time;
+				document.getElementById("estartdate").value = SQLDateToJs(start_date);
+				document.getElementById("eenddate").value = SQLDateToJs(end_date);
+				document.getElementById("estarttime").value = SQLTimeToJs(start_time);
+				document.getElementById("eendtime").value = SQLTimeToJs(end_time);
 				document.getElementById("edoneseconds").value = work_done;
 				document.getElementById("eweekmask").value = weekmask;
 			}, false);
+		});
+
+		const editForm = document.getElementById('edit');
+		editForm.addEventListener('submit', (event) => {
+			event.preventDefault();
+
+			const id = document.getElementById("eid").value;
+			// const rfid_id = document.getElementById("erfid_id").value;
+			const name = document.getElementById("ename").value;
+			const status = document.getElementById("estatus").value;
+
+			const start_time = jsTimeToSQL(document.getElementById("estarttime").value);
+			const end_time = jsTimeToSQL(document.getElementById("eendtime").value);
+			const created_at = document.getElementById("ecreatedat").value;
+			const start_date = jsDateToSQL(document.getElementById("estartdate").value,
+										  document.getElementById("estarttime").value);
+			const end_date = jsDateToSQL(document.getElementById("eenddate").value,
+										 document.getElementById("eendtime").value);
+			
+			const work_done = document.getElementById("edoneseconds").value;
+			const weekmask = document.getElementById("eweekmask").value;
+			
+			socket.emit("edit_student", {name : name, status : status, start_date : start_date
+										 end_date : end_date, start_time : start_time,
+										 end_time: end_time, done_seconds : work_done,
+										 weekmask : weekmask});
+			return false;
 		});
 	</script>
 </html>

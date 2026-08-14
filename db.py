@@ -1,5 +1,9 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta, date, time
+from dateutil.relativedelta import relativedelta
+import numpy as np
+
+from utils import format_datetime, to_datetime, to_time, validate_weekmask
 
 DB_NAME = "rfid.db"
 
@@ -28,7 +32,7 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS students (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            rfid_id TEXT NOT NULL,
+            rfid_id TEXT NOT NULL UNIQUE,
             name TEXT NOT NULL,
             status TEXT CHECK( status IN ('IN','OUT') )   NOT NULL DEFAULT 'OUT',
             created_at TEXT NOT NULL,
@@ -45,7 +49,7 @@ def init_db():
     con.close()
 
 def log_scan(rfid_id, name):
-    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    timestamp = format_datetime(datetime.now())
 
     con = sqlite3.connect(DB_NAME)
     cur = con.cursor()
@@ -109,7 +113,7 @@ def get_student(rfid_id):
     return dict_from_row(student)
 
 def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100"):
-    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    timestamp = format_datetime(datetime.now())
 
     con = sqlite3.connect(DB_NAME)
     con.row_factory = sqlite3.Row
@@ -131,7 +135,7 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
 
     return dict_from_row(student)
 
-def update_student(student_id, rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100"):
+def update_student(student_id, name, start_date, end_date, start_time, end_time, weekmask="1111100"):
     con = sqlite3.connect(DB_NAME)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
@@ -142,10 +146,10 @@ def update_student(student_id, rfid_id, name, start_date, end_date, start_time, 
     cur.execute("""
         UPDATE students 
         SET (rfid_id, name, created_at, start_date, end_date, start_time, end_time, weekmask) 
-        = (?, ?, ?, ?, ?, ?, ?, ?)
+        = (?, ?, ?, ?, ?, ?, ?)
         WHERE id = ?
         RETURNING *
-    """, (str(rfid_id), name, timestamp, start_date, end_date, start_time, end_time, weekmask, student_id))
+    """, (name, timestamp, start_date, end_date, start_time, end_time, weekmask, student_id))
 
     student = cur.fetchone()
 
@@ -188,5 +192,56 @@ def toggle_student_status(id):
     con.commit()
     con.close()
 
+    return status
+
+
+def accumulate_done(interval):
+    con = sqlite3.connect(DB_NAME)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+
+    # TODO: Limit to workday and add overtime somehow
+
+    cur.execute("""
+        UPDATE students 
+        SET done_seconds = done_seconds + ?
+        WHERE status = "IN"
+        RETURNING *
+    """, (interval,))
+
+    rows = cur.fetchall()
+
+    con.commit()
+    con.close()
+
+    return [dict(row) for row in rows]
+
+def get_student_remaining(student):
+    done_seconds = student["done_seconds"]
+    day_starts_str = student["start_time"]
+    day_ends_str = student["end_time"]
+    start_date_str = student["start_date"] 
+    end_date_str = student["end_date"]
+    weekmask = student["weekmask"]
+
+    done_time = timedelta(seconds=done_seconds)
+    day_starts_time = to_time(day_starts_str)
+    day_ends_time = to_time(day_ends_str)
+
+    day_length = datetime.combine(date.today(), day_ends_time) - datetime.combine(date.today(), day_starts_time)
+
+    start_date = to_datetime(start_date_str)
+    end_date = to_datetime(end_date_str)
+
+    current_date = datetime.now()
+
+    business_days = np.busday_count(
+        np.datetime64(start_date.date(), "D"),
+        np.datetime64(min(current_date.date(), end_date.date()), "D") + np.timedelta64(1, "D"),
+        weekmask=weekmask
+    )
+
+    return (((datetime.combine(date.today(), current_date.time()) - datetime.combine(date.today(), day_starts_time))) + (day_length * (business_days - 1)) - done_time).total_seconds()
+    
 if __name__ == "__main__":
     init_db()
