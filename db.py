@@ -135,7 +135,7 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
 
     return dict_from_row(student)
 
-def update_student(student_id, name, start_date, end_date, start_time, end_time, weekmask="1111100"):
+def update_student(student_id, name, start_date, end_date, start_time, end_time, done_seconds, weekmask="1111100"):
     con = sqlite3.connect(DB_NAME)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
@@ -145,11 +145,11 @@ def update_student(student_id, name, start_date, end_date, start_time, end_time,
     # Weekmask: '1111100' - 1 is work day, 0 is free day
     cur.execute("""
         UPDATE students 
-        SET (rfid_id, name, created_at, start_date, end_date, start_time, end_time, weekmask) 
+        SET (name, start_date, end_date, start_time, end_time, done_seconds, weekmask) 
         = (?, ?, ?, ?, ?, ?, ?)
         WHERE id = ?
         RETURNING *
-    """, (name, timestamp, start_date, end_date, start_time, end_time, weekmask, student_id))
+    """, (name, start_date, end_date, start_time, end_time, done_seconds, weekmask, student_id,))
 
     student = cur.fetchone()
 

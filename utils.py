@@ -1,10 +1,12 @@
+import re
 from datetime import datetime
 
 date_format = '%d.%m.%Y %H:%M:%S' # 10.8.2026 12:12:12
 time_format = '%H.%M' # 10:20
+weekmask_regex = '^[0,1]{7}$' # 1111100
 
 def validate_weekmask(weekmask):
-    pass
+    return re.search(weekmask_regex, weekmask)
 
 def validate_datetime(date_str):
     pass

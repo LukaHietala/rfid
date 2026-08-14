@@ -5,7 +5,7 @@ from flask import render_template
 from flask_socketio import SocketIO, emit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from db import get_scans, get_students, create_student, accumulate_done
+from db import get_scans, get_students, create_student, accumulate_done, update_student
 from rfid import start_logger
 
 app = Flask(__name__)
@@ -36,8 +36,9 @@ def add_student(json):
 
 @socketio.on('edit_student')
 def edit_student(json):
-    
-    print(json)
+    update_student(json["id"],  json["name"], json["start_date"],
+                   json["end_date"], json["start_time"], json["end_time"],
+                   json["done_seconds"], json["weekmask"])
     
 if __name__ == "__main__":
     # Listen to RFID reader

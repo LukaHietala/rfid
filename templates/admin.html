@@ -182,12 +182,13 @@
 			const end_date = jsDateToSQL(document.getElementById("eenddate").value,
 										 document.getElementById("eendtime").value);
 			
-			const work_done = document.getElementById("edoneseconds").value;
+			const done_seconds = document.getElementById("edoneseconds").value;
 			const weekmask = document.getElementById("eweekmask").value;
 			
-			socket.emit("edit_student", {name : name, status : status, start_date : start_date
+			socket.emit("edit_student", {id : id,
+										 name : name, status : status, start_date : start_date,
 										 end_date : end_date, start_time : start_time,
-										 end_time: end_time, done_seconds : work_done,
+										 end_time: end_time, done_seconds : done_seconds,
 										 weekmask : weekmask});
 			return false;
 		});
