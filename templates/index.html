@@ -1,42 +1,50 @@
-<h2>Students</h2>
-<table>
-	<tr>
-		<th>Name</th>
-		<th>Status</th>
-	</tr>
-	{% for student in students %}
-	<tr>
-		<td>{{ student.name }}</td>
-		<td id="{{ student.rfid_id }}">{{ student.status }}</td>
-	</tr>
-	{% endfor %}
-</table> 
-	
-<script type="module">
-    import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="{{ url_for('static', filename='utils.js') }}"></script>
+		<title>Info</title>
+	</head>
+	<body>
+		<h2>Students</h2>
+		<table>
+			<tr>
+				<th>Name</th>
+				<th>Status</th>
+			</tr>
+			{% for student in students %}
+			<tr>
+				<td>{{ student.name }}</td>
+				<td id="{{ student.rfid_id }}">{{ student.status }}</td>
+			</tr>
+			{% endfor %}
+		</table> 
+	</body>	
+	<script type="module">
+		import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
 
-    const socket = io()
-    socket.on('connect', function() {
-        socket.emit('test', {data: 'connected!!!!'});
-    });
-    
-    socket.on('new_scan', (data) => {
-		const name = data.name;
-		const id = data.rfid_id;
-		cponst status = data.status;
-		// Update table
-		document.getElementById(id).textContent = status;
-		// Create popup about new scan
-		const div = document.createElement("div");
-		const newContent = document.createTextNode(`New scan: ${name} at ${id}`);
-		div.style.position = "fixed";
-		div.style.right = "50px";
-		div.style.top = "50px";
-		div.append(newContent);
-		document.body.appendChild(div);
+		const socket = io()
+		socket.on('connect', function() {
+			socket.emit('test', {data: 'connected!!!!'});
+		});
 
-		setTimeout(function() {
-			document.body.removeChild(div);
-		}, 5000);
-    })
-</script>
+		socket.on('new_scan', (data) => {
+			const id = data.rfid_id;
+			const name = data.name;
+			const msg = data.msg;
+			const status = data.status;
+			const in_database = data.found;
+			// Update table
+			if (in_database) {
+				document.getElementById(id).textContent = status;
+			}
+			// Create popup about new scan
+			const popup_text = in_database ?
+				  `New scan: ${name} at ${id}`
+				  : msg;
+			popup(popup_text);
+		})
+	</script>
+</html>
+

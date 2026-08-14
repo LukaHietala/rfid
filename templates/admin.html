@@ -3,23 +3,31 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script src="{{ url_for('static', filename='utils.js') }}"></script>
 		<title>Admin</title>
+		<style>
+			table, th, td {
+				border: 1px solid black;
+			}
+		</style>
 	</head>
 	<body>
 		<h1>Students</h1>
 		<table>
-			<tr>id</tr>
-			<tr>rfid_id</tr>
-			<tr>name</tr>
-			<tr>status</tr>
-			
-			<tr>created_at</tr>
-			<tr>start_at</tr>
-			<tr>end_date</tr>
-			<tr>start_time</tr>
-			<tr>end_time</tr>
-			<tr>done_seconds</tr>
-			<tr>weekmask</tr>
+			<tr>
+				<th>id</th>
+				<th>rfid_id</th>
+				<th>name</th>
+				<th>status</th>
+				
+				<th>created_at</th>
+				<th>start_at</th>
+				<th>end_date</th>
+				<th>start_time</th>
+				<th>end_time</th>
+				<th>done_seconds</th>
+				<th>weekmask</th>
+			</tr>
 			{% for student in students %}
 			<tr>
 				<td>{{ student.id }}</td>
@@ -37,5 +45,47 @@
 			</tr>
 			{% endfor %}
 		</table>
+		<form id="add">
+			<label for="name">Nimi</label><br>
+			<input type="text" id="name" name="name"><br>
+			<label for="rfid_id">RFID_ID</label><br>
+			<input type="text" id="rfid_id" name="rfid_id" readonly><br>
+			<button type="submit">Luo</button>
+		</form>
 	</body>
+	<script type="module">
+		import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
+
+		const socket = io()
+		socket.on('connect', function() {
+			socket.emit('test', {data: 'connected!!!!'});
+		});
+
+		socket.on('new_scan', (data) => {
+			const id = data.rfid_id;
+			const in_database = data.found;
+			if (in_database) {
+				const name = data.name;
+				popup(`${id} is already in the database as ${name}`);
+			} else {
+				document.getElementById("rfid_id").value = id;
+				popup(`RFID_ID: ${id} succesfully scanned! `);
+			}
+		});
+
+		socket.on('new_student', (data) => {
+			const name = data.name;
+			const rfid_id = data.rfid_id;
+			popup(`RFID_ID: ${rfid_id} added to table as ${name}`);
+		});
+
+		const form = document.getElementById('add');
+		form.addEventListener('submit', (event) => {
+			event.preventDefault();
+			const name = document.getElementById('name').value;
+			const rfid_id = document.getElementById('rfid_id').value;
+			socket.emit("add_student", {name : name, rfid_id : rfid_id});
+			return false;
+		});
+	</script>
 </html

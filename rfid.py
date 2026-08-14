@@ -4,9 +4,10 @@ import random
 import RPi.GPIO as GPIO
 from mfrc522 import SimpleMFRC522
 
-from db import log_scan, get_student, toggle_student_status, get_student_remaining
+from db import log_scan, get_student, toggle_student_status
+from student import get_student_remaining
 
-def read_data(reader):
+def read_tag(reader):
     id, data = reader.read()
     return id, data.strip()
 
@@ -18,34 +19,36 @@ def start_logger(new_scan):
     reader = SimpleMFRC522()
 
     last_tag = {
-        "id": None,
+        "rfid_id": None,
         "last_scanned": 0
     }
 
     try:
         while True:
-            id, data = read_data(reader)
+            rfid_id, _ = read_tag(reader)
 
             now = time.time()
-            if (id == last_tag["id"] and (now - last_tag["last_scanned"]) < 2):
+            if (rfid_id == last_tag["rfid_id"] and (now - last_tag["last_scanned"]) < 2):
                 continue
 
-            last_tag["id"] = id
+            last_tag["rfid_id"] = rfid_id
             last_tag["last_scanned"] = now
 
-            if not data or not id:
+            if not rfid_id:
                 continue
 
-            log_scan(id, data)
-            toggle_student_status(id)
-            student = get_student(id)
+            student = get_student(rfid_id)
+
             if student:
-                new_scan({"name" : data, "rfid_id" : id, "status" : student["status"]})
-                #remaining = get_student_remaining(student)
-                #print(remaining)
+                toggle_student_status(student["id"])
+                log_scan(student["rfid_id"], student["name"])
+                new_scan({"found" : True , "name" : student["name"], "rfid_id" : student["rfid_id"], "status" : student["status"]})
+                
+                remaining = get_student_remaining(student)
+                print("Remaining", remaining / 3600)
                 print("Found student:", student)
             else:
-                new_scan({"rfid_id" : id, msg : "Could not find student based on id" })
+                new_scan({"found" : False, "rfid_id" : rfid_id, "msg" : "Could not find student based on id" })
                 print("Student not found based on tag")
 
             time.sleep(0.5)

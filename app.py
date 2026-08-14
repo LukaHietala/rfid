@@ -4,7 +4,7 @@ from flask import Flask
 from flask import render_template
 from flask_socketio import SocketIO, emit
 
-from db import get_scans, get_students
+from db import get_scans, get_students, create_student
 from rfid import start_logger
 
 app = Flask(__name__)
@@ -13,38 +13,25 @@ socketio = SocketIO(app)
 
 def new_scan(scan):
     """
-    Sends new scan
+    Sends new scan via websocket
 
     :scan: dict with name and rfid_id
     """
     socketio.emit('new_scan', scan)
 
-def update_status(student_id, status):
-    """
-    Sends the status of a student
-
-    :student_id: id
-    :status: boolean
-    """
-    pass
-
 @app.route("/")
 def index():
-    scans = get_scans()
-    students = get_students()
-
-    return render_template('index.html', scans=scans, students=students)
+    return render_template('index.html', students=get_students())
 
 @app.route("/admin")
 def admin():
-    students = get_students()
+    return render_template('admin.html', students=get_students())
 
-    return render_template('admin.html', students=students)
-
-@socketio.on('test')
-def test(json):
-    print('asfdsadf ' + str(json))
-
+@socketio.on('add_student')
+def add_student(json):
+    print(json)
+    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], "2026-08-13 12:52:36", "2026-08-20 12:52:36", "8.00", "16.00"))
+    
 if __name__ == "__main__":
     thread = threading.Thread(
         target=start_logger,
