@@ -45,7 +45,7 @@ def init_db():
     con.close()
 
 def log_scan(rfid_id, name):
-    timestamp = datetime.now().isoformat(timespec="seconds")
+    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
 
     con = sqlite3.connect(DB_NAME)
     cur = con.cursor()
@@ -109,13 +109,13 @@ def get_student(rfid_id):
     return dict_from_row(student)
 
 def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100"):
-    timestamp = datetime.now().isoformat(timespec="seconds")
+    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
 
     con = sqlite3.connect(DB_NAME)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
-    # Date format is: '%Y-%m-%d %H:%M:%S' - 2026-08-20 12:52:36
+    # Date format is: '%d.%m.%Y %H:%M:%S' - 20.08.2026 12:52:36
     # Time format is: '%H.%M' - 8.00
     # Weekmask: '1111100' - 1 is work day, 0 is free day
     cur.execute("""
@@ -131,8 +131,29 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
 
     return dict_from_row(student)
 
-def update_student():
-    pass
+def update_student(student_id, rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100"):
+    con = sqlite3.connect(DB_NAME)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+
+    # Date format is: '%d.%m.%Y %H:%M:%S' - 20.08.2026 12:52:36
+    # Time format is: '%H.%M' - 8.00
+    # Weekmask: '1111100' - 1 is work day, 0 is free day
+    cur.execute("""
+        UPDATE students 
+        SET (rfid_id, name, created_at, start_date, end_date, start_time, end_time, weekmask) 
+        = (?, ?, ?, ?, ?, ?, ?, ?)
+        WHERE id = ?
+        RETURNING *
+    """, (str(rfid_id), name, timestamp, start_date, end_date, start_time, end_time, weekmask, student_id))
+
+    student = cur.fetchone()
+
+    con.commit()
+    con.close()
+
+    return dict_from_row(student)
+
 
 def toggle_student_status(id):
     con = sqlite3.connect(DB_NAME)

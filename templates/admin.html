@@ -21,36 +21,65 @@
 				<th>status</th>
 				
 				<th>created_at</th>
-				<th>start_at</th>
+				<th>start_date</th>
 				<th>end_date</th>
 				<th>start_time</th>
 				<th>end_time</th>
 				<th>done_seconds</th>
 				<th>weekmask</th>
+				<th>action</th>
 			</tr>
 			{% for student in students %}
 			<tr>
 				<td>{{ student.id }}</td>
-				<td>{{ student.rfid_id }}</td>
-				<td>{{ student.name }}</td>
-				<td>{{ student.status }}</td>
+				<td id="{{ student.id }}rfidid">{{ student.rfid_id }}</td>
+				<td id="{{ student.id }}name">{{ student.name }}</td>
+				<td id="{{ student.id }}status">{{ student.status }}</td>
 				
-				<td>{{ student.created_at }}</td>
-				<td>{{ student.start_date }}</td>
-				<td>{{ student.end_date }}</td>
-				<td>{{ student.start_time }}</td>
-				<td>{{ student.end_time }}</td>
-				<td>{{ student.done_seconds }}</td>
-				<td>{{ student.weekmask }}</td>
+				<td id="{{ student.id }}createdat">{{ student.created_at }}</td>
+				<td id="{{ student.id }}startdate">{{ student.start_date }}</td>
+				<td id="{{ student.id }}enddate">{{ student.end_date }}</td>
+				<td id="{{ student.id }}starttime">{{ student.start_time }}</td>
+				<td id="{{ student.id }}endtime">{{ student.end_time }}</td>
+				<td id="{{ student.id }}done">{{ student.done_seconds }}</td>
+				<td id="{{ student.id }}weekmask">{{ student.weekmask }}</td>
+				<td><button data-id="{{ student.id }}">Edit</button></td>
 			</tr>
 			{% endfor %}
 		</table>
+		<h2>Add student</h2>
 		<form id="add">
 			<label for="name">Nimi</label><br>
-			<input type="text" id="name" name="name"><br>
+			<input type="text" id="name"><br>
 			<label for="rfid_id">RFID_ID</label><br>
-			<input type="text" id="rfid_id" name="rfid_id" readonly><br>
+			<input type="text" id="rfid_id" disabled><br>
 			<button type="submit">Luo</button>
+		</form>
+		<h2>Edit student</h2>
+		<form id="edit">
+			<label for="eid">id</label><br>
+			<input type="text" id="eid" disabled><br>
+			<label for="erfid_id">RFID_ID</label><br>
+			<input type="text" id="erfid_id" disabled><br>
+			<label for="ename">name</label><br>
+			<input type="text" id="ename"><br>
+			<label for="estatus">status</label><br>
+			<input type="text" id="estatus"><br>
+			<label for="ecreatedat">created_at</label><br>
+			<input type="text" id="ecreatedat" disabled><br>
+			<label for="estartdate">start_date</label><br>
+			<input type="text" id="estartdate"><br>
+			<label for="eenddate">end_date</label><br>
+			<input type="text" id="eenddate"><br>
+			<label for="estarttime">start_time</label><br>
+			<input type="text" id="estarttime"><br>
+			<label for="eendtime">end_time</label><br>
+			<input type="text" id="eendtime"><br>
+			<label for="edoneseconds">done_seconds</label><br>
+			<input type="text" id="edoneseconds"><br>
+			<label for="eweekmask">weekmask</label><br>
+			<input type="text" id="eweekmask"><br>
+			<button type="submit">Muokkaa</button>
 		</form>
 	</body>
 	<script type="module">
@@ -60,7 +89,6 @@
 		socket.on('connect', function() {
 			socket.emit('test', {data: 'connected!!!!'});
 		});
-
 		socket.on('new_scan', (data) => {
 			const id = data.rfid_id;
 			const in_database = data.found;
@@ -87,5 +115,35 @@
 			socket.emit("add_student", {name : name, rfid_id : rfid_id});
 			return false;
 		});
+
+		// Add events to buttons
+		Array.from(document.querySelectorAll("button")).map((button) => {
+			button.addEventListener("click", () => {
+				// Get info
+				const id = button.dataset.id;
+				const rfid_id = document.getElementById(id + "rfidid").textContent;
+				const name = document.getElementById(id + "name").textContent;
+				const status = document.getElementById(id + "status").textContent;
+				const created_at = document.getElementById(id + "createdat").textContent;
+				const start_date = document.getElementById(id + "startdate").textContent;
+				const end_date = document.getElementById(id + "enddate").textContent;
+				const start_time = document.getElementById(id + "starttime").textContent;
+				const end_time = document.getElementById(id + "endtime").textContent;
+				const work_done = document.getElementById(id + "done").textContent;
+				const weekmask = document.getElementById(id + "weekmask").textContent;
+				// Set info
+				document.getElementById("eid").value = id;
+				document.getElementById("erfid_id").value = rfid_id;
+				document.getElementById("ename").value = name;
+				document.getElementById("estatus").value = status;
+				document.getElementById("ecreatedat").value = created_at;
+				document.getElementById("estartdate").value = start_date;
+				document.getElementById("eenddate").value = end_date;
+				document.getElementById("estarttime").value = start_time;
+				document.getElementById("eendtime").value = end_time;
+				document.getElementById("edoneseconds").value = work_done;
+				document.getElementById("eweekmask").value = weekmask;
+			}, false);
+		});
 	</script>
-</html
+</html>

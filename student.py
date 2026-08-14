@@ -16,7 +16,7 @@ def get_student_remaining(student):
 
     day_length = datetime.combine(date.today(), day_ends_time) - datetime.combine(date.today(), day_starts_time)
 
-    date_format = '%Y-%m-%d %H:%M:%S'
+    date_format = '%d.%m.%Y %H:%M:%S'
 
     start_date = datetime.strptime(start_date_str, date_format)
     end_date = datetime.strptime(end_date_str, date_format)

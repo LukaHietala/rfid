@@ -29,8 +29,7 @@ def admin():
 
 @socketio.on('add_student')
 def add_student(json):
-    print(json)
-    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], "2026-08-13 12:52:36", "2026-08-20 12:52:36", "8.00", "16.00"))
+    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], "13.08.2026 12:52:36", "20.08.2026 12:52:36", "8.00", "16.00"))
     
 if __name__ == "__main__":
     thread = threading.Thread(
