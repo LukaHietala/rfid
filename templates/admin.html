@@ -4,10 +4,21 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<script src="{{ url_for('static', filename='utils.js') }}"></script>
+		<script src="{{ url_for('static', filename='calendar.js') }}"></script>
 		<title>Admin</title>
 		<style>
 			table, th, td {
 				border: 1px solid black;
+			}
+			.grid {
+				display: grid;
+				grid-template-columns: auto auto auto;
+			}
+			.first {
+				grid-column: 1;
+			}
+			.second {
+				grid-column: 2;
 			}
 		</style>
 	</head>
@@ -27,6 +38,7 @@
 				<th>end_time</th>
 				<th>done_seconds</th>
 				<th>weekmask</th>
+				<th>excluded_days</th>
 				<th>action</th>
 			</tr>
 			{% for student in students %}
@@ -43,47 +55,60 @@
 				<td id="{{ student.id }}endtime">{{ student.end_time }}</td>
 				<td id="{{ student.id }}done">{{ student.done_seconds }}</td>
 				<td id="{{ student.id }}weekmask">{{ student.weekmask }}</td>
+				<td id="{{ student.id }}holidays">{{ student.excluded_days }}</td>
 				<td><button data-id="{{ student.id }}">Edit</button></td>
 			</tr>
 			{% endfor %}
 		</table>
-		<h2>Add student</h2>
-		<form id="add">
-			<label for="name">Nimi</label><br>
-			<input type="text" id="name"><br>
-			<label for="rfid_id">RFID_ID</label><br>
-			<input type="text" id="rfid_id" disabled><br>
-			<button type="submit">Luo</button>
-		</form>
-		<h2>Edit student</h2>
-		<form id="edit">
-			<label for="eid">id</label><br>
-			<input type="text" id="eid" disabled><br>
-			<label for="erfid_id">RFID_ID</label><br>
-			<input type="text" id="erfid_id" disabled><br>
-			<label for="ename">name</label><br>
-			<input type="text" id="ename"><br>			
-			<label for="estatus">status</label><br>
-			<select id="estatus">
-				<option value="OUT">IN</option>
-				<option value="IN">OUT</option>
-			</select><br>
-			<label for="ecreatedat">created_at</label><br>
-			<input type="text" id="ecreatedat" disabled><br>
-			<label for="estartdate">start_date</label><br>
-			<input type="date" id="estartdate"><br>
-			<label for="eenddate">end_date</label><br>
-			<input type="date" id="eenddate"><br>
-			<label for="estarttime">start_time</label><br>
-			<input type="time" id="estarttime"><br>
-			<label for="eendtime">end_time</label><br>
-			<input type="time" id="eendtime"><br>
-			<label for="edoneseconds">done_seconds</label><br>
-			<input type="text" id="edoneseconds"><br>
-			<label for="eweekmask">weekmask</label><br>
-			<input type="text" id="eweekmask" pattern='[0,1]{7}'><br>
-			<button type="submit">Muokkaa</button>
-		</form>
+		<div class="grid">
+			<div class="first">
+				<h2>Add student</h2>
+				<form id="add">
+					<label for="name">Nimi</label><br>
+					<input type="text" id="name"><br>
+					<label for="rfid_id">RFID_ID</label><br>
+					<input type="text" id="rfid_id" disabled><br>
+					<button type="submit">Luo</button>
+				</form>
+				<h2>Global calendar</h2>
+				<calendar-component id="gcalendar"></calendar-component>
+				<button id="addholidays">Add holidays</button>
+				<button id="setworkdays">Set workdays</button>
+			</div>
+			<div class="second hidden">
+				<h2>Edit student</h2>
+				<form id="edit">
+					<label for="eid">id</label><br>
+					<input type="text" id="eid" disabled><br>
+					<label for="erfid_id">RFID_ID</label><br>
+					<input type="text" id="erfid_id" disabled><br>
+					<label for="ename">name</label><br>
+					<input type="text" id="ename"><br>			
+					<label for="estatus">status</label><br>
+					<select id="estatus">
+						<option value="OUT">IN</option>
+						<option value="IN">OUT</option>
+					</select><br>
+					<label for="ecreatedat">created_at</label><br>
+					<input type="text" id="ecreatedat" disabled><br>
+					<!-- <label for="estartdate">start_date</label><br> -->
+					<!-- <input type="date" id="estartdate"><br> -->
+					<!-- <label for="eenddate">end_date</label><br> -->
+					<!-- <input type="date" id="eenddate"><br> -->
+					<label for="estarttime">start_time</label><br>
+					<input type="time" id="estarttime"><br>
+					<label for="eendtime">end_time</label><br>
+					<input type="time" id="eendtime"><br>
+					<label for="edoneseconds">done_seconds</label><br>
+					<input type="text" id="edoneseconds"><br>
+					<label for="eweekmask">weekmask</label><br>
+					<input type="text" id="eweekmask" pattern='[0,1]{7}'><br>
+					<button type="submit">Muokkaa</button>
+				</form>
+				<h2>Student calendar</h2>
+				<calendar-component id="calendar"></calendar-component>
+			</div>
+		</div>
 	</body>
 	<script type="module">
 		import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
@@ -119,17 +144,34 @@
 			return false;
 		});
 
+		// Global calendar
+		document.getElementById("setworkdays").addEventListener('click', (event) => {
+			event.preventDefault();
+			const start = jsDateToSQL(document.getElementById("gcalendar").startDate,
+									  "08:00");
+			const end = jsDateToSQL(document.getElementById("gcalendar").endDate,
+									"16:00");
+			socket.emit("set_workdays", {start : start, end : end});
+			return false;
+		});
+		document.getElementById("addholidays").addEventListener('click', (event) => {
+			event.preventDefault();
+			const holidays = document.getElementById("gcalendar").holidays;
+			socket.emit("add_holidays", {holidays : holidays});
+			return false;
+		});
+		
 		function jsTimeToSQL(jstime) {
-			return ((jstime[0] == "0") ? jstime.slice(-4) : jstime).replace(":", ".")
+			return ((jstime[0] == "0") ? jstime.slice(-4) : jstime).replace(":", ".");
 		}
 		function SQLTimeToJs(sqltime) {
 			return ((sqltime.length == 4) ? "0" : "") + (sqltime.replace(".", ":"));
 		}
 		function jsDateToSQL(jsdate, jstime) {
-			return `${jsdate.split("-").reverse().join(".")} ${jstime}:00`;
+			return `${jsdate.split("-").reverse().map(Calendar.pad).join(".")} ${jstime}:00`;
 		}
 		function SQLDateToJs(sqldate) {
-			return (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().join("-")
+			return (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().map(Calendar.pad).join("-");
 		}
 		
 		// Add events to buttons
@@ -150,18 +192,27 @@
 				const end_time = document.getElementById(id + "endtime").textContent;
 				const work_done = document.getElementById(id + "done").textContent;
 				const weekmask = document.getElementById(id + "weekmask").textContent;
+				const holidays = JSON.parse(document.getElementById(id + "holidays").textContent);
 				// Set info
 				document.getElementById("eid").value = id;
 				document.getElementById("erfid_id").value = rfid_id;
 				document.getElementById("ename").value = name;
 				document.getElementById("estatus").value = status;
 				document.getElementById("ecreatedat").value = created_at;
-				document.getElementById("estartdate").value = SQLDateToJs(start_date);
-				document.getElementById("eenddate").value = SQLDateToJs(end_date);
+				// document.getElementById("estartdate").value = SQLDateToJs(start_date);
+				// document.getElementById("eenddate").value = SQLDateToJs(end_date);
 				document.getElementById("estarttime").value = SQLTimeToJs(start_time);
 				document.getElementById("eendtime").value = SQLTimeToJs(end_time);
 				document.getElementById("edoneseconds").value = work_done;
 				document.getElementById("eweekmask").value = weekmask;
+
+				const calendar = document.getElementById("calendar");
+				calendar.year = (new Date()).getFullYear();
+				calendar.month = (new Date()).getMonth() + 1;
+				calendar.startDate = SQLDateToJs(start_date);
+				calendar.endDate = SQLDateToJs(end_date);
+				calendar.weekmask = weekmask;
+				calendar.holidays = holidays;
 			}, false);
 		});
 
@@ -177,10 +228,12 @@
 			const start_time = jsTimeToSQL(document.getElementById("estarttime").value);
 			const end_time = jsTimeToSQL(document.getElementById("eendtime").value);
 			const created_at = document.getElementById("ecreatedat").value;
-			const start_date = jsDateToSQL(document.getElementById("estartdate").value,
+			
+			const start_date = jsDateToSQL(document.getElementById("calendar").startDate,
 										  document.getElementById("estarttime").value);
-			const end_date = jsDateToSQL(document.getElementById("eenddate").value,
+			const end_date = jsDateToSQL(document.getElementById("calendar").endDate,
 										 document.getElementById("eendtime").value);
+			const holidays = document.getElementById("calendar").holidays;
 			
 			const done_seconds = document.getElementById("edoneseconds").value;
 			const weekmask = document.getElementById("eweekmask").value;
@@ -189,8 +242,11 @@
 										 name : name, status : status, start_date : start_date,
 										 end_date : end_date, start_time : start_time,
 										 end_time: end_time, done_seconds : done_seconds,
-										 weekmask : weekmask});
+										 weekmask : weekmask, holidays : JSON.stringify(holidays)});
 			return false;
 		});
+
+		let day;
+		
 	</script>
 </html>

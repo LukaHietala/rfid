@@ -6,28 +6,67 @@
         <script src="{{ url_for('static', filename='utils.js') }}"></script>
 		<title>Info</title>
 	</head>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: sans-serif;
+            margin: 0;
+        }
+
+        main {
+            margin: 40px auto;
+            max-width: 800px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-gap: 30px;
+            font-size: x-large;
+        }
+        
+        p {
+            margin: 0;
+        }
+        
+        .selected-item {
+            border: 2px solid #00a4e4;
+            border-radius: 5px;
+            padding: 30px;
+            flex: 1 1 0px;
+        }
+        
+        .selected-item .extra {
+            color: #a19f9f;
+        }
+        
+        .disabled-item {
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            padding: 30px;
+            flex: 1 1 0px;
+            color: #ccc !important;
+        }
+        
+        .disabled-item .extra {
+            color: #ccc;
+        }
+
+    </style>
 	<body>
-		<h2>Students</h2>
-		<table>
-			<tr>
-				<th>Name</th>
-				<th>Status</th>
-			</tr>
+        <main>
 			{% for student in students %}
-			<tr>
-				<td>{{ student.name }}</td>
-				<td id="{{ student.rfid_id }}">{{ student.status }}</td>
-			</tr>
+            <div id="{{ student.rfid_id }}" class="{{'selected-item' if student.status == 'IN' else 'disabled-item'}}">
+                <p style="font-size: x-large;">{{ student.name }}</p>
+                <p class="extra" style="margin: 4px 0 0 0; font-size: small;">Töitä jäljellä: 2t 51min</p>
+			</div>
 			{% endfor %}
-		</table> 
+        </main>
 	</body>	
 	<script type="module">
 		import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
 
 		const socket = io()
-		socket.on('connect', function() {
-			socket.emit('test', {data: 'connected!!!!'});
-		});
 
 		socket.on('new_scan', (data) => {
 			const id = data.rfid_id;
@@ -35,15 +74,22 @@
 			const msg = data.msg;
 			const status = data.status;
 			const in_database = data.found;
+            const card = document.getElementById(id)
 			// Update table
-			if (in_database) {
-				document.getElementById(id).textContent = status;
+			if (!in_database) {
+               return popup(msg)
 			}
-			// Create popup about new scan
-			const popup_text = in_database ?
-				  `New scan: ${name} at ${id}`
-				  : msg;
-			popup(popup_text);
+            
+            if (status === "IN") {
+			    card.classList.remove("disabled-item")
+			    card.classList.add("selected-item")
+            } else {
+			    card.classList.remove("selected-item")
+			    card.classList.add("disabled-item")
+            }
+
+			const popupText = `New scan: ${name} at ${id}`
+			popup(popupText);
 		})
 	</script>
 </html>

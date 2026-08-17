@@ -5,7 +5,7 @@ from flask import render_template
 from flask_socketio import SocketIO, emit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from db import get_scans, get_students, create_student, accumulate_done, update_student
+from db import get_scans, get_students, create_student, accumulate_done, update_student, replace_workdays, add_excluded_days
 from rfid import start_logger
 
 app = Flask(__name__)
@@ -33,12 +33,20 @@ def admin():
 @socketio.on('add_student')
 def add_student(json):
     socketio.emit('new_student', create_student(json["rfid_id"], json["name"], "13.08.2026 12:52:36", "20.08.2026 12:52:36", "8.00", "16.00"))
-
+    
 @socketio.on('edit_student')
 def edit_student(json):
     update_student(json["id"],  json["name"], json["start_date"],
                    json["end_date"], json["start_time"], json["end_time"],
-                   json["done_seconds"], json["weekmask"])
+                   json["done_seconds"], json["weekmask"], json["holidays"])
+
+@socketio.on('set_workdays')
+def set_workdays(json):
+    replace_workdays(json["start"], json["end"])
+
+@socketio.on('add_holidays')
+def add_holidays(json):
+    add_excluded_days(json["holidays"])
     
 if __name__ == "__main__":
     # Listen to RFID reader

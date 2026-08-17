@@ -2,10 +2,22 @@ import sqlite3
 from datetime import datetime, timedelta, date, time
 from dateutil.relativedelta import relativedelta
 import numpy as np
+import json
 
 from utils import format_datetime, to_datetime, to_time, validate_weekmask
 
 DB_NAME = "rfid.db"
+
+def adapt_json(data):
+    return json.dumps(data, sort_keys=True)
+
+def convert_json(blob):
+    return json.loads(blob)
+
+sqlite3.register_adapter(dict, adapt_json)
+sqlite3.register_adapter(list, adapt_json)
+sqlite3.register_adapter(tuple, adapt_json)
+sqlite3.register_converter('JSON', convert_json)
 
 # Source - https://stackoverflow.com/a/9538363
 # Posted by bbengfort, modified by community. See post 'Timeline' for change history
@@ -17,7 +29,7 @@ def dict_from_row(row):
     return dict(zip(row.keys(), row))       
 
 def init_db():
-    con = sqlite3.connect(DB_NAME)
+    con = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES)
     cur = con.cursor()
 
     cur.execute("""
@@ -41,8 +53,9 @@ def init_db():
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
             done_seconds INTEGER NOT NULL DEFAULT 0,
-            weekmask TEXT NOT NULL
-        )
+            weekmask TEXT NOT NULL,
+            excluded_days JSON
+        ) 
     """)
 
     con.commit()
@@ -97,7 +110,7 @@ def get_students(limit=1000):
     return [dict(row) for row in rows]
 
 def get_student(rfid_id):
-    con = sqlite3.connect(DB_NAME)
+    con = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     
@@ -112,7 +125,7 @@ def get_student(rfid_id):
     con.close()
     return dict_from_row(student)
 
-def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100"):
+def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100", excluded_days=[]):
     timestamp = format_datetime(datetime.now())
 
     con = sqlite3.connect(DB_NAME)
@@ -123,10 +136,10 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
     # Time format is: '%H.%M' - 8.00
     # Weekmask: '1111100' - 1 is work day, 0 is free day
     cur.execute("""
-        INSERT INTO students (rfid_id, name, created_at, start_date, end_date, start_time, end_time, weekmask)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO students (rfid_id, name, created_at, start_date, end_date, start_time, end_time, weekmask, excluded_days)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
-    """, (str(rfid_id), name, timestamp, start_date, end_date, start_time, end_time, weekmask))
+    """, (str(rfid_id), name, timestamp, start_date, end_date, start_time, end_time, weekmask, excluded_days))
 
     student = cur.fetchone()
 
@@ -135,7 +148,7 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
 
     return dict_from_row(student)
 
-def update_student(student_id, name, start_date, end_date, start_time, end_time, done_seconds, weekmask="1111100"):
+def update_student(student_id, name, start_date, end_date, start_time, end_time, done_seconds, weekmask="1111100", excluded_days=[]):
     con = sqlite3.connect(DB_NAME)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
@@ -145,11 +158,11 @@ def update_student(student_id, name, start_date, end_date, start_time, end_time,
     # Weekmask: '1111100' - 1 is work day, 0 is free day
     cur.execute("""
         UPDATE students 
-        SET (name, start_date, end_date, start_time, end_time, done_seconds, weekmask) 
-        = (?, ?, ?, ?, ?, ?, ?)
+        SET (name, start_date, end_date, start_time, end_time, done_seconds, weekmask, excluded_days) 
+        = (?, ?, ?, ?, ?, ?, ?, ?)
         WHERE id = ?
         RETURNING *
-    """, (name, start_date, end_date, start_time, end_time, done_seconds, weekmask, student_id,))
+    """, (name, start_date, end_date, start_time, end_time, done_seconds, weekmask, excluded_days, student_id,))
 
     student = cur.fetchone()
 
@@ -165,7 +178,7 @@ def toggle_student_status(id):
 
     cur.execute("""
         SELECT status
-        FROM students
+         FROM students
         WHERE id = ?
     """, (str(id),))
 
@@ -216,6 +229,51 @@ def accumulate_done(interval):
 
     return [dict(row) for row in rows]
 
+def replace_workdays(start_date, end_date):
+    """    
+    Replace the starting and ending dates of all students.    
+    :returns: updated students table
+    """
+    con = sqlite3.connect(DB_NAME)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+
+    cur.execute("""
+        UPDATE students 
+        SET start_date = ?, end_date = ?
+        RETURNING *
+    """, (start_date, end_date,))
+
+    rows = cur.fetchall()
+
+    con.commit()
+    con.close()
+
+def add_excluded_days(excluded_days : list[str]):
+    """
+    Adds excluded_days to all students, without overwriting
+    existing days
+    :returns: updated students table
+    """
+    students = get_students()
+
+    con = sqlite3.connect(DB_NAME)
+    cur = con.cursor()
+    for student in students:
+        new_excluded = json.loads(student["excluded_days"])
+        new_excluded += excluded_days
+        
+        cur.execute("""
+        UPDATE students 
+        SET excluded_days = ?
+        WHERE id=?
+        """, (json.dumps(new_excluded), student["id"],))
+
+    con.commit()
+    con.close()
+        
+    return get_students()
+    
 def get_student_remaining(student):
     done_seconds = student["done_seconds"]
     day_starts_str = student["start_time"]
@@ -223,6 +281,7 @@ def get_student_remaining(student):
     start_date_str = student["start_date"] 
     end_date_str = student["end_date"]
     weekmask = student["weekmask"]
+    excluded_days = student["excluded_days"]
 
     done_time = timedelta(seconds=done_seconds)
     day_starts_time = to_time(day_starts_str)
@@ -238,7 +297,8 @@ def get_student_remaining(student):
     business_days = np.busday_count(
         np.datetime64(start_date.date(), "D"),
         np.datetime64(min(current_date.date(), end_date.date()), "D") + np.timedelta64(1, "D"),
-        weekmask=weekmask
+        weekmask=weekmask,
+        holidays=excluded_days
     )
 
     return (((datetime.combine(date.today(), current_date.time()) - datetime.combine(date.today(), day_starts_time))) + (day_length * (business_days - 1)) - done_time).total_seconds()
