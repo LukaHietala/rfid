@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, date, time
 import numpy as np
 
 # Tietokannassa sekunteina tehdyt tunnit
-done_seconds = 0
+done_seconds = 100000
 
 done_time = timedelta(seconds=done_seconds)
 
@@ -24,7 +24,7 @@ date_format = '%Y-%m-%d %H:%M:%S'
 start_date = datetime.strptime(start_date_str, date_format)
 
 # 0 on tämä päivä, jne. timedelta lisäys vain debug varten
-current_date = start_date
+current_date = start_date + timedelta(days=1)
 
 business_days = np.busday_count(
     np.datetime64(start_date.date(), "D"),

@@ -1,14 +1,16 @@
-function popup(text) {
-		const div = document.createElement("div");
-		const newContent = document.createTextNode(text);
-		div.style.position = "fixed";
-		div.style.right = "50px";
-		div.style.top = "50px";
-		div.append(newContent);
-		document.body.appendChild(div);
+let timer
 
-		setTimeout(function() {
-				document.body.removeChild(div);
+function popup(text) {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+
+		const popupElement = document.getElementById("popup")
+		popupElement.innerHTML = text
+
+		timer = setTimeout(function() {
+		        popupElement.innerHTML = ""
 		}, 5000);
 }
 

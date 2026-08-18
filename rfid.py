@@ -44,11 +44,8 @@ def start_logger(new_scan):
                 new_scan({"found" : True , "name" : student["name"], "rfid_id" : student["rfid_id"], "status" : new_status})
                 
                 print("Found student:", student)
-                remaining = get_student_remaining(student)
-                print("Remaining", remaining / 3600)
-                print("Excluded days", student["excluded_days"])
             else:
-                new_scan({"found" : False, "rfid_id" : rfid_id, "msg" : "Could not find student based on id" })
+                new_scan({"found" : False, "rfid_id" : rfid_id, "msg" : "Oppilasta ei löytynyt" })
                 print("Student not found based on tag")
 
             time.sleep(0.5)

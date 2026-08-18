@@ -8,17 +8,6 @@ from utils import format_datetime, to_datetime, to_time, validate_weekmask
 
 DB_NAME = "rfid.db"
 
-def adapt_json(data):
-    return json.dumps(data, sort_keys=True)
-
-def convert_json(blob):
-    return json.loads(blob)
-
-sqlite3.register_adapter(dict, adapt_json)
-sqlite3.register_adapter(list, adapt_json)
-sqlite3.register_adapter(tuple, adapt_json)
-sqlite3.register_converter('JSON', convert_json)
-
 # Source - https://stackoverflow.com/a/9538363
 # Posted by bbengfort, modified by community. See post 'Timeline' for change history
 # Retrieved 2026-08-13, License - CC BY-SA 3.0
@@ -29,7 +18,7 @@ def dict_from_row(row):
     return dict(zip(row.keys(), row))       
 
 def init_db():
-    con = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(DB_NAME)
     cur = con.cursor()
 
     cur.execute("""
@@ -54,7 +43,7 @@ def init_db():
             end_time TEXT NOT NULL,
             done_seconds INTEGER NOT NULL DEFAULT 0,
             weekmask TEXT NOT NULL,
-            excluded_days JSON
+            excluded_days TEXT DEFAULT '[]'
         ) 
     """)
 
@@ -105,12 +94,20 @@ def get_students(limit=1000):
     """, (limit,))
 
     rows = cur.fetchall()
+
+    students = []
+    for row in rows:
+        student = dict_from_row(row)
+        remaining = get_student_remaining(student)
+        student["remaining"] = remaining
+        students.append(student)
+
     con.close()
 
-    return [dict(row) for row in rows]
+    return students
 
 def get_student(rfid_id):
-    con = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES)
+    con = sqlite3.connect(DB_NAME)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     
@@ -120,10 +117,13 @@ def get_student(rfid_id):
         WHERE rfid_id = ?
     """, (str(rfid_id),))
 
-    student = cur.fetchone()
+    student = dict_from_row(cur.fetchone())
+    if student:
+        remaining = get_student_remaining(student)
+        student["remaining"] = remaining
 
     con.close()
-    return dict_from_row(student)
+    return student
 
 def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100", excluded_days=[]):
     timestamp = format_datetime(datetime.now())
@@ -281,7 +281,7 @@ def get_student_remaining(student):
     start_date_str = student["start_date"] 
     end_date_str = student["end_date"]
     weekmask = student["weekmask"]
-    excluded_days = student["excluded_days"]
+    excluded_days = json.loads(student["excluded_days"])
 
     done_time = timedelta(seconds=done_seconds)
     day_starts_time = to_time(day_starts_str)
