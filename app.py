@@ -6,12 +6,15 @@ from flask import render_template
 from flask_socketio import SocketIO, emit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from db import get_scans, get_students, create_student, accumulate_done, update_student, replace_workdays, add_excluded_days
+from db import get_scans, get_students, create_student, accumulate_done, update_student, replace_workdays, add_excluded_days, remove_student
 from rfid import start_logger
+from utils import seconds_to_human
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'kiljuva_pomeranian'
 socketio = SocketIO(app)
+
+app.jinja_env.filters["seconds_to_human"] = seconds_to_human
 
 scheduler = BackgroundScheduler()
 
@@ -37,10 +40,15 @@ def add_student(json):
     
 @socketio.on('edit_student')
 def edit_student(json):
-    update_student(json["id"],  json["name"], json["start_date"],
-                   json["end_date"], json["start_time"], json["end_time"],
-                   json["done_seconds"], json["weekmask"], json["holidays"])
+    new = update_student(json["id"],  json["name"], json["start_date"],
+                         json["end_date"], json["start_time"], json["end_time"],
+                         json["done_seconds"], json["weekmask"], json["holidays"])
+    socketio.emit('update_student', new)
 
+@socketio.on('delete_student')
+def delete_student(json):
+    remove_student(json["id"])
+    
 @socketio.on('set_workdays')
 def set_workdays(json):
     replace_workdays(json["start"], json["end"])

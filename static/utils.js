@@ -1,11 +1,11 @@
 let timer
 
 function popup(text) {
-        if (timer) {
-            clearTimeout(timer);
-            timer = null;
-        }
-
+    if (timer) {
+        clearTimeout(timer);
+        timer = null;
+    }
+		
 		const popupElement = document.getElementById("popup")
 		popupElement.innerHTML = text
 

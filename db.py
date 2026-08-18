@@ -17,8 +17,14 @@ def dict_from_row(row):
         return
     return dict(zip(row.keys(), row))       
 
+# TODO: DB mutex
+# Accumulate done runs on a seperate thread so it might corrupt the db
+
+def get_connection():
+    return sqlite3.connect(DB_NAME, check_same_thread=False)
+
 def init_db():
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     cur = con.cursor()
 
     cur.execute("""
@@ -53,7 +59,7 @@ def init_db():
 def log_scan(rfid_id, name):
     timestamp = format_datetime(datetime.now())
 
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     cur = con.cursor()
 
     cur.execute("""
@@ -67,7 +73,7 @@ def log_scan(rfid_id, name):
     return timestamp
 
 def get_scans(limit=1000):
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
@@ -83,7 +89,7 @@ def get_scans(limit=1000):
     return [dict(row) for row in rows]
 
 def get_students(limit=1000):
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
@@ -107,7 +113,7 @@ def get_students(limit=1000):
     return students
 
 def get_student(rfid_id):
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     
@@ -125,10 +131,10 @@ def get_student(rfid_id):
     con.close()
     return student
 
-def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100", excluded_days=[]):
+def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100", excluded_days="[]"):
     timestamp = format_datetime(datetime.now())
 
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
@@ -148,8 +154,8 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
 
     return dict_from_row(student)
 
-def update_student(student_id, name, start_date, end_date, start_time, end_time, done_seconds, weekmask="1111100", excluded_days=[]):
-    con = sqlite3.connect(DB_NAME)
+def update_student(student_id, name, start_date, end_date, start_time, end_time, done_seconds, weekmask="1111100", excluded_days="[]"):
+    con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
@@ -171,9 +177,23 @@ def update_student(student_id, name, start_date, end_date, start_time, end_time,
 
     return dict_from_row(student)
 
+def remove_student(student_id):
+    """
+    Deletes a student from the database by id
+    """
+    con = get_connection()
+    cur = con.cursor()
+
+    cur.execute("""
+        DELETE FROM students
+        WHERE id = ?
+    """, (student_id,))
+
+    con.commit()
+    con.close()
 
 def toggle_student_status(id):
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     cur = con.cursor()
 
     cur.execute("""
@@ -209,7 +229,7 @@ def toggle_student_status(id):
 
 
 def accumulate_done(interval):
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
@@ -234,7 +254,7 @@ def replace_workdays(start_date, end_date):
     Replace the starting and ending dates of all students.    
     :returns: updated students table
     """
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
@@ -257,7 +277,7 @@ def add_excluded_days(excluded_days : list[str]):
     """
     students = get_students()
 
-    con = sqlite3.connect(DB_NAME)
+    con = get_connection()
     cur = con.cursor()
     for student in students:
         new_excluded = json.loads(student["excluded_days"])

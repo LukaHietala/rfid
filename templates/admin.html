@@ -3,6 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script src="//unpkg.com/alpinejs" defer></script>
 		<script src="{{ url_for('static', filename='utils.js') }}"></script>
 		<script src="{{ url_for('static', filename='calendar.js') }}"></script>
 		<title>Admin</title>
@@ -22,7 +23,8 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body x-data="{ editing: false }">
+		<p id="popup" class="popup"></p>
 		<h1>Students</h1>
 		<table>
 			<tr>
@@ -42,7 +44,7 @@
 				<th>action</th>
 			</tr>
 			{% for student in students %}
-			<tr>
+			<tr id="{{student.id}}tr">
 				<td>{{ student.id }}</td>
 				<td id="{{ student.id }}rfidid">{{ student.rfid_id }}</td>
 				<td id="{{ student.id }}name">{{ student.name }}</td>
@@ -56,7 +58,13 @@
 				<td id="{{ student.id }}done">{{ student.done_seconds }}</td>
 				<td id="{{ student.id }}weekmask">{{ student.weekmask }}</td>
 				<td id="{{ student.id }}holidays">{{ student.excluded_days }}</td>
-				<td><button data-id="{{ student.id }}">Edit</button></td>
+				<td>
+					<button class="edit-button"
+							data-id="{{student.id}}"
+							x-on:click="editing = true">Edit</button>
+					<button class="delete-button"
+							data-id="{{student.id}}">Delete</button>
+				</td>
 			</tr>
 			{% endfor %}
 		</table>
@@ -75,7 +83,7 @@
 				<button id="addholidays">Add holidays</button>
 				<button id="setworkdays">Set workdays</button>
 			</div>
-			<div class="second hidden">
+			<div class="second" x-show="editing">
 				<h2>Edit student</h2>
 				<form id="edit">
 					<label for="eid">id</label><br>
@@ -103,7 +111,7 @@
 					<input type="text" id="edoneseconds"><br>
 					<label for="eweekmask">weekmask</label><br>
 					<input type="text" id="eweekmask" pattern='[0,1]{7}'><br>
-					<button type="submit">Muokkaa</button>
+					<button type="submit" x-on:click="editing = false">Muokkaa</button>
 				</form>
 				<h2>Student calendar</h2>
 				<calendar-component id="calendar"></calendar-component>
@@ -112,8 +120,8 @@
 	</body>
 	<script type="module">
 		import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
-
-		const socket = io()
+		
+		const socket = io();
 		socket.on('connect', function() {
 			socket.emit('test', {data: 'connected!!!!'});
 		});
@@ -132,9 +140,27 @@
 		socket.on('new_student', (data) => {
 			const name = data.name;
 			const rfid_id = data.rfid_id;
-			popup(`RFID_ID: ${rfid_id} added to table as ${name}`);
+			popup(`RFID_ID: ${rfid_id} added to table as ${name}`);	
 		});
 
+		socket.on('update_student', (data) => {
+			console.log(data);
+			popup(`RFID_ID: ${data.rfid_id} updated`);
+			const id = data.id;
+			
+			document.getElementById(id + "rfidid").textContent = data.rfid_id;
+			document.getElementById(id + "name").textContent = data.name;
+			document.getElementById(id + "status").textContent = data.status;
+			document.getElementById(id + "createdat").textContent = data.created_at;
+			document.getElementById(id + "startdate").textContent = data.start_date;
+			document.getElementById(id + "enddate").textContent = data.end_date;
+			document.getElementById(id + "starttime").textContent = data.start_time;
+			document.getElementById(id + "endtime").textContent = data.end_time;
+			document.getElementById(id + "done").textContent = data.done_seconds;
+			document.getElementById(id + "weekmask").textContent = data.weekmask;
+			document.getElementById(id + "holidays").textContent = data.excluded_days;
+		});
+		
 		const addForm = document.getElementById('add');
 		addForm.addEventListener('submit', (event) => {
 			event.preventDefault();
@@ -175,7 +201,7 @@
 		}
 		
 		// Add events to buttons
-		Array.from(document.querySelectorAll("button")).map((button) => {
+		Array.from(document.querySelectorAll(".edit-button")).map((button) => {
 			if (button.dataset.id == undefined) {
 				return;
 			}
@@ -215,6 +241,16 @@
 				calendar.holidays = holidays;
 			}, false);
 		});
+		Array.from(document.querySelectorAll(".delete-button")).map((button) => {
+			if (button.dataset.id == undefined) {
+				return;
+			}
+			button.addEventListener("click", () => {
+				const id = button.dataset.id;
+				socket.emit("delete_student", {id : id});
+				document.getElementById(`${id}tr`).remove();
+			}, false);
+		});
 
 		const editForm = document.getElementById('edit');
 		editForm.addEventListener('submit', (event) => {
@@ -247,6 +283,5 @@
 		});
 
 		let day;
-		
 	</script>
 </html>
