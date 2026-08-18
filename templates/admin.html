@@ -26,7 +26,7 @@
 	<body x-data="{ editing: false }">
 		<p id="popup" class="popup"></p>
 		<h1>Students</h1>
-		<table>
+		<table id="table">
 			<tr>
 				<th>id</th>
 				<th>rfid_id</th>
@@ -140,7 +140,33 @@
 		socket.on('new_student', (data) => {
 			const name = data.name;
 			const rfid_id = data.rfid_id;
-			popup(`RFID_ID: ${rfid_id} added to table as ${name}`);	
+			const id = data.id;
+			popup(`RFID_ID: ${rfid_id} added to table as ${name}`);
+
+			const table = document.getElementById("table");
+			const row = document.createElement("tr");
+			row.id = `${id}tr`;
+			const things = [
+				{div_id : "", value : data.id},
+				{div_id : "rfidid", value : data.rfid_id},
+				{div_id : "name", value : data.name},
+				{div_id : "status", value : data.status},
+				{div_id : "createdat", value : data.created_at},
+				{div_id : "startdate", value : data.start_date},
+				{div_id : "enddate", value : data.end_date},
+				{div_id : "starttime", value : data.start_time},
+				{div_id : "endtime", value : data.end_time},
+				{div_id : "done", value : data.done_seconds},
+				{div_id : "weekmask", value : data.weekmask},
+				{div_id : "holidays", value : data.excluded_days}
+			];
+			things.forEach((thing) => {
+				const td = document.createElement("td");
+				td.id = `${id}${thing.div_id}`;
+				td.textContent = thing.value;
+				row.appendChild(td);
+			});
+			table.appendChild(row);
 		});
 
 		socket.on('update_student', (data) => {
