@@ -4,74 +4,20 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
         <script src="{{ url_for('static', filename='utils.js') }}"></script>
-		<title>Info</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='index.css')}}">
 	</head>
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: sans-serif;
-            margin: 0;
-        }
-
-        main {
-            margin: 40px auto;
-            max-width: 800px;
-        }
-        
-        .student-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            grid-gap: 30px;
-            font-size: x-large;
-        }
-        
-        p {
-            margin: 0;
-        }
-        
-        .selected-item {
-            border: 2px solid #00a4e4;
-            border-radius: 5px;
-            padding: 30px;
-            flex: 1 1 0px;
-        }
-        
-        .selected-item .extra {
-            color: #a19f9f;
-        }
-        
-        .disabled-item {
-            border: 2px solid #ccc;
-            border-radius: 5px;
-            padding: 30px;
-            flex: 1 1 0px;
-            color: #ccc !important;
-        }
-        
-        .disabled-item .extra {
-            color: #ccc;
-        }
-
-        .popup {
-            text-align: center;
-            margin: 0 0 30px 0;
-        }
-
-    </style>
 	<body>
-        <main>
+        <main x-data>
             <p id="popup" class="popup"></p>
             {% if students %}
                 <div class="student-list">
-                    {% for student in students %}
-                    <div id="{{ student.rfid_id }}" class="{{'selected-item' if student.status == 'IN' else 'disabled-item'}}">
-                        <p style="font-size: large;">{{ student.name }}</p>
-                        <p class="extra" style="margin: 4px 0 0 0; font-size: small;">Töitä jäljellä: {{ student.remaining | seconds_to_human }}</p>
-                    </div>
-                    {% endfor %}
+					<template x-for="student in $store.info.students">
+						<div class="selected-item">
+							<p style="font-size: large;" x-text="student.name"></p>
+							<p class="extra" style="margin: 4px 0 0 0;
+							font-size: small;">Töitä jäljellä: <span x-text="student.remaining"></span></p>
+						</div>
+					</template>
                 </div>
             {% else %}
                 <p >Ei oppilaita</p>
@@ -79,10 +25,15 @@
         </main>
 	</body>	
 	<script type="module">
-		import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
+        import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
+		import Alpine from 'https://cdn.jsdelivr.net/npm/alpinejs@3.16.2/+esm'
+		const socket = io();
+		window.Alpine = Alpine;
 
-		const socket = io()
-
+		Alpine.store('info', {
+			students: [{name : "moi", status : "moi"}]
+		})
+		
 		socket.on('new_scan', (data) => {
 			const id = data.rfid_id;
 			const name = data.name;
@@ -107,6 +58,7 @@
 			const popupText = `Uusi skannaus: ${name} (${id})`
 			popup(popupText);
 		})
+		Alpine.start();
 	</script>
 </html>
 

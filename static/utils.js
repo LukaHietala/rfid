@@ -1,4 +1,4 @@
-let timer
+let timer;
 
 function popup(text) {
     if (timer) {
@@ -13,4 +13,59 @@ function popup(text) {
 		        popupElement.innerHTML = ""
 		}, 5000);
 }
+
+class StudentBox extends HTMLElement {
+		constructor() {
+				super();
+				const shadowRoot = this.attachShadow({mode: 'open'});
+
+				
+				
+				shadowRoot.appendChild(cont);
+		}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

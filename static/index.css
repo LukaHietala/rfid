@@ -1,0 +1,52 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: sans-serif;
+    margin: 0;
+}
+
+main {
+    margin: 40px auto;
+    max-width: 800px;
+}
+
+.student-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-gap: 30px;
+    font-size: x-large;
+}
+
+p {
+    margin: 0;
+}
+
+.selected-item {
+    border: 2px solid #00a4e4;
+    border-radius: 5px;
+    padding: 30px;
+    flex: 1 1 0px;
+}
+
+.selected-item .extra {
+    color: #a19f9f;
+}
+
+.disabled-item {
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    padding: 30px;
+    flex: 1 1 0px;
+    color: #ccc !important;
+}
+
+.disabled-item .extra {
+    color: #ccc;
+}
+
+.popup {
+    text-align: center;
+    margin: 0 0 30px 0;
+}

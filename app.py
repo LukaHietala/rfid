@@ -12,7 +12,7 @@ from utils import seconds_to_human
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'kiljuva_pomeranian'
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 app.jinja_env.filters["seconds_to_human"] = seconds_to_human
 
@@ -56,7 +56,7 @@ def set_workdays(json):
 @socketio.on('add_holidays')
 def add_holidays(json):
     add_excluded_days(json["holidays"])
-    
+
 if __name__ == "__main__":
     # Listen to RFID reader
     thread = threading.Thread(
