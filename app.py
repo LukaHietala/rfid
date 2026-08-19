@@ -8,13 +8,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from db import get_scans, get_students, create_student, accumulate_done, update_student, replace_workdays, add_excluded_days, remove_student
 from rfid import start_logger
-from utils import seconds_to_human
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'kiljuva_pomeranian'
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-app.jinja_env.filters["seconds_to_human"] = seconds_to_human
 
 scheduler = BackgroundScheduler()
 
@@ -36,26 +33,28 @@ def admin():
 
 @socketio.on('add_student')
 def add_student(json):
-    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], "13.08.2026 12:52:36", "20.08.2026 12:52:36", "8.00", "16.00"))
+    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], "13.08.2026 12:52:36", "20.08.2026 12:52:36", "08:00", "16:00"))
     
 @socketio.on('delete_student')
 def delete_student(json):
-    socketio.emit('remove_student', { 'id': remove_student(json["id"]) })
+    socketio.emit('remove_student', remove_student(json["id"]))
 
 @socketio.on('edit_student')
 def edit_student(json):
     updated_student = update_student(json["id"],  json["name"], json["start_date"],
                          json["end_date"], json["start_time"], json["end_time"],
-                         json["done_seconds"], json["weekmask"], json["holidays"])
+                         json["done_seconds"], json["weekmask"], json["excluded_days"])
     socketio.emit('update_student', updated_student)
     
 @socketio.on('set_workdays')
 def set_workdays(json):
     replace_workdays(json["start"], json["end"])
+    socketio.emit('update_all', get_students())
 
 @socketio.on('add_holidays')
 def add_holidays(json):
     add_excluded_days(json["holidays"])
+    socketio.emit('update_all', get_students())
 
 @app.route("/api/students", methods=["GET"])
 def get_students_json():
@@ -71,7 +70,7 @@ if __name__ == "__main__":
     thread.start()
 
     # Accumulate done hours for students
-    interval = 10
+    interval = 60
     scheduler.add_job(lambda: accumulate_done(interval), 'interval', seconds=interval)
     scheduler.start()
 

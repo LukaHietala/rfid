@@ -3,7 +3,6 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<script src="//unpkg.com/alpinejs" defer></script>
 		<script src="{{ url_for('static', filename='utils.js') }}"></script>
 		<script src="{{ url_for('static', filename='calendar.js') }}"></script>
 		<title>Admin</title>
@@ -25,57 +24,56 @@
 	</head>
 	<body x-data="{ editing: false }">
 		<p id="popup" class="popup"></p>
-		<h1>Students</h1>
+		<h1>Oppilaat</h1>
 		<table id="table">
 			<tr>
-				<th>id</th>
-				<th>rfid_id</th>
-				<th>name</th>
-				<th>status</th>
-				
-				<th>created_at</th>
-				<th>start_date</th>
-				<th>end_date</th>
-				<th>start_time</th>
-				<th>end_time</th>
-				<th>done_seconds</th>
-				<th>weekmask</th>
-				<th>excluded_days</th>
-				<th>action</th>
+				<th>ID</th>
+				<th>RFID_ID</th>
+				<th>Nimi</th>
+				<th>Tila</th>
+				<th>Luotu</th>
+				<th>Aloitus päivä</th>
+				<th>Lopetus päivä</th>
+				<th>Päivän alku</th>
+				<th>Päivän loppu</th>
+				<th>Töitä tehty</th>
+				<th>Weekmask</th>
+				<th>Vapaa päivät</th>
+				<th>Toiminnot</th>
 			</tr>
-			{% for student in students %}
-			<tr id="{{student.id}}tr">
-				<td>{{ student.id }}</td>
-				<td id="{{ student.id }}rfidid">{{ student.rfid_id }}</td>
-				<td id="{{ student.id }}name">{{ student.name }}</td>
-				<td id="{{ student.id }}status">{{ student.status }}</td>
-				
-				<td id="{{ student.id }}createdat">{{ student.created_at }}</td>
-				<td id="{{ student.id }}startdate">{{ student.start_date }}</td>
-				<td id="{{ student.id }}enddate">{{ student.end_date }}</td>
-				<td id="{{ student.id }}starttime">{{ student.start_time }}</td>
-				<td id="{{ student.id }}endtime">{{ student.end_time }}</td>
-				<td id="{{ student.id }}done">{{ student.done_seconds }}</td>
-				<td id="{{ student.id }}weekmask">{{ student.weekmask }}</td>
-				<td id="{{ student.id }}holidays">{{ student.excluded_days }}</td>
-				<td>
-					<button class="edit-button"
-							data-id="{{student.id}}"
-							x-on:click="editing = true">Edit</button>
-					<button class="delete-button"
-							data-id="{{student.id}}">Delete</button>
-				</td>
-			</tr>
-			{% endfor %}
+			<template x-for="student in $store.info.students">
+				<tr>
+					<td x-text="student.id"></td>
+					<td x-text="student.rfid_id"></td>
+					<td x-text="student.name"></td>
+					<td x-text="student.status"></td>					
+					<td x-text="student.created_at"></td>
+					<td x-text="student.start_date"></td>
+					<td x-text="student.end_date"></td>
+					<td x-text="student.start_time"></td>
+					<td x-text="student.end_time"></td>
+					<td x-text="secondsToHuman(student.done_seconds)"></td>
+					<td x-text="student.weekmask"></td>
+					<td x-text="student.excluded_days"></td>
+					<td>
+						<button x-on:click="editStudent(student)">
+							Muokkaa
+						</button>
+						<button x-on:click="deleteStudent(student)">
+							Poista
+						</button>
+					</td>
+				</tr>
+			</template>
 		</table>
 		<div class="grid">
 			<div class="first">
 				<h2>Add student</h2>
 				<form id="add">
 					<label for="name">Nimi</label><br>
-					<input type="text" id="name"><br>
+					<input type="text" x-model="$store.add.name"><br>
 					<label for="rfid_id">RFID_ID</label><br>
-					<input type="text" id="rfid_id" disabled><br>
+					<input type="text" x-model="$store.add.rfid_id" disabled><br>
 					<button type="submit">Luo</button>
 				</form>
 				<h2>Global calendar</h2>
@@ -83,35 +81,40 @@
 				<button id="addholidays">Add holidays</button>
 				<button id="setworkdays">Set workdays</button>
 			</div>
-			<div class="second" x-show="editing">
+			<div class="second" x-show="$store.edit.editing">
 				<h2>Edit student</h2>
 				<form id="edit">
-					<label for="eid">id</label><br>
-					<input type="text" id="eid" disabled><br>
-					<label for="erfid_id">RFID_ID</label><br>
-					<input type="text" id="erfid_id" disabled><br>
-					<label for="ename">name</label><br>
-					<input type="text" id="ename"><br>			
-					<label for="estatus">status</label><br>
-					<select id="estatus">
+					<label for="id">id</label><br>
+					<input type="text" id="id" disabled
+						   x-model="$store.edit.student.id"><br>
+					<label for="rfid_id">RFID_ID</label><br>
+					<input type="text" id="rfid_id" disabled
+						   x-model="$store.edit.student.rfid_id"><br>
+					<label for="name">name</label><br>
+					<input type="text" id="name"
+						   x-model="$store.edit.student.name"><br>			
+					<label for="status">status</label><br>
+					<select id="status"
+							x-model="$store.edit.student.status">
 						<option value="OUT">IN</option>
 						<option value="IN">OUT</option>
 					</select><br>
-					<label for="ecreatedat">created_at</label><br>
-					<input type="text" id="ecreatedat" disabled><br>
-					<!-- <label for="estartdate">start_date</label><br> -->
-					<!-- <input type="date" id="estartdate"><br> -->
-					<!-- <label for="eenddate">end_date</label><br> -->
-					<!-- <input type="date" id="eenddate"><br> -->
-					<label for="estarttime">start_time</label><br>
-					<input type="time" id="estarttime"><br>
-					<label for="eendtime">end_time</label><br>
-					<input type="time" id="eendtime"><br>
-					<label for="edoneseconds">done_seconds</label><br>
-					<input type="text" id="edoneseconds"><br>
-					<label for="eweekmask">weekmask</label><br>
-					<input type="text" id="eweekmask" pattern='[0,1]{7}'><br>
-					<button type="submit" x-on:click="editing = false">Muokkaa</button>
+					<label for="createdat">created_at</label><br>
+					<input type="text" id="createdat" disabled
+						   x-model="$store.edit.student.created_at"><br>
+					<label for="starttime">start_time</label><br>
+					<input type="time" id="starttime"
+						   x-model="$store.edit.student.start_time"><br>
+					<label for="endtime">end_time</label><br>
+					<input type="time" id="endtime"
+						   x-model="$store.edit.student.end_time"><br>
+					<label for="doneseconds">done_seconds</label><br>
+					<input type="text" id="doneseconds"
+						   x-model="$store.edit.student.done_seconds"><br>
+					<label for="weekmask">weekmask</label><br>
+					<input type="text" id="weekmask" pattern='[0,1]{7}'
+						   x-model="$store.edit.student.weekmask"><br>
+					<button type="submit">Muokkaa</button>
 				</form>
 				<h2>Student calendar</h2>
 				<calendar-component id="calendar"></calendar-component>
@@ -120,78 +123,76 @@
 	</body>
 	<script type="module">
 		import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
+		import Alpine from "/static/alpine.js";
 		
 		const socket = io();
-		socket.on('connect', function() {
-			socket.emit('test', {data: 'connected!!!!'});
+		window.Alpine = Alpine;
+		
+        async function getStudents() {
+			try {
+				const response = await fetch("/api/students");
+				if (!response.ok) {
+					throw new Error("Jotain meni pieleen: " + response.status)
+				}
+				Alpine.store('info', {
+					students: await response.json()
+				});
+			} catch (e) {
+				console.error(e.message)
+			} finally {
+				studentTimer = setTimeout(() => {getStudents()}, 60 * 1000)
+			}
+        }
+        await getStudents();
+
+		Alpine.store('add', {
+			rfid_id: "None",
+			name: "Jaakko pekka"
 		});
+		Alpine.store('edit', {
+			student: null,
+			editing: false
+		});
+
 		socket.on('new_scan', (data) => {
-			const id = data.rfid_id;
+			const rfid_id = data.rfid_id;
 			const in_database = data.found;
 			if (in_database) {				
 				const name = data.name;
-				popup(`${id} is already in the database as ${name}`);
+				popup(`${rfid_id} on jo tietokannassa nimellä ${name}`);
 			} else {
-				document.getElementById("rfid_id").value = id;
-				popup(`RFID_ID: ${id} succesfully scanned! `);
+				Alpine.store('add').rfid_id = rfid_id;
+				popup(`RFID_ID: ${rfid_id} skannattu! `);
 			}
 		});
 
 		socket.on('new_student', (data) => {
-			const name = data.name;
-			const rfid_id = data.rfid_id;
-			const id = data.id;
-			popup(`RFID_ID: ${rfid_id} added to table as ${name}`);
-
-			const table = document.getElementById("table");
-			const row = document.createElement("tr");
-			row.id = `${id}tr`;
-			const things = [
-				{div_id : "", value : data.id},
-				{div_id : "rfidid", value : data.rfid_id},
-				{div_id : "name", value : data.name},
-				{div_id : "status", value : data.status},
-				{div_id : "createdat", value : data.created_at},
-				{div_id : "startdate", value : data.start_date},
-				{div_id : "enddate", value : data.end_date},
-				{div_id : "starttime", value : data.start_time},
-				{div_id : "endtime", value : data.end_time},
-				{div_id : "done", value : data.done_seconds},
-				{div_id : "weekmask", value : data.weekmask},
-				{div_id : "holidays", value : data.excluded_days}
-			];
-			things.forEach((thing) => {
-				const td = document.createElement("td");
-				td.id = `${id}${thing.div_id}`;
-				td.textContent = thing.value;
-				row.appendChild(td);
-			});
-			table.appendChild(row);
+			popup(`RFID_ID: ${data.rfid_id} lisätty pöytään nimellä ${data.name}`);
+			Alpine.store('info').students.push(data);
 		});
 
 		socket.on('update_student', (data) => {
-			console.log(data);
-			popup(`RFID_ID: ${data.rfid_id} updated`);
-			const id = data.id;
-			
-			document.getElementById(id + "rfidid").textContent = data.rfid_id;
-			document.getElementById(id + "name").textContent = data.name;
-			document.getElementById(id + "status").textContent = data.status;
-			document.getElementById(id + "createdat").textContent = data.created_at;
-			document.getElementById(id + "startdate").textContent = data.start_date;
-			document.getElementById(id + "enddate").textContent = data.end_date;
-			document.getElementById(id + "starttime").textContent = data.start_time;
-			document.getElementById(id + "endtime").textContent = data.end_time;
-			document.getElementById(id + "done").textContent = data.done_seconds;
-			document.getElementById(id + "weekmask").textContent = data.weekmask;
-			document.getElementById(id + "holidays").textContent = data.excluded_days;
+ 			const index = Alpine.store('info').students.findIndex((student) => student.id == data.id);
+			Alpine.store('info').students[index] = data;
+			popup(`Päivitetty oppilas: ${data.name}`);
+		});
+
+		socket.on('remove_student', (data) => {
+			Alpine.store('info').students =
+				Alpine.store('info').students.filter((student) => student.id != data.id);
+			popup(`Poistettu oppilas: ${data.name}`);
+		});
+
+		socket.on('update_all', (data) => {
+			Alpine.store('info').students = data;
+			popup(`Päivitetty oppilaat`);
 		});
 		
 		const addForm = document.getElementById('add');
 		addForm.addEventListener('submit', (event) => {
 			event.preventDefault();
-			const name = document.getElementById('name').value;
-			const rfid_id = document.getElementById('rfid_id').value;
+			const name = Alpine.store('add').name;
+			const rfid_id = Alpine.store('add').rfid_id;
 			socket.emit("add_student", {name : name, rfid_id : rfid_id});
 			return false;
 		});
@@ -213,101 +214,44 @@
 			return false;
 		});
 		
-		function jsTimeToSQL(jstime) {
-			return ((jstime[0] == "0") ? jstime.slice(-4) : jstime).replace(":", ".");
-		}
-		function SQLTimeToJs(sqltime) {
-			return ((sqltime.length == 4) ? "0" : "") + (sqltime.replace(".", ":"));
-		}
-		function jsDateToSQL(jsdate, jstime) {
-			return `${jsdate.split("-").reverse().map(Calendar.pad).join(".")} ${jstime}:00`;
+		function jsDateToSQL(jsdate, time) {
+			return `${jsdate.split("-").reverse().map(Calendar.pad).join(".")} ${time}:00`;
 		}
 		function SQLDateToJs(sqldate) {
 			return (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().map(Calendar.pad).join("-");
 		}
-		
-		// Add events to buttons
-		Array.from(document.querySelectorAll(".edit-button")).map((button) => {
-			if (button.dataset.id == undefined) {
-				return;
-			}
-			button.addEventListener("click", () => {
-				// Get info
-				const id = button.dataset.id;
-				const rfid_id = document.getElementById(id + "rfidid").textContent;
-				const name = document.getElementById(id + "name").textContent;
-				const status = document.getElementById(id + "status").textContent;
-				const created_at = document.getElementById(id + "createdat").textContent;
-				const start_date = document.getElementById(id + "startdate").textContent;
-				const end_date = document.getElementById(id + "enddate").textContent;
-				const start_time = document.getElementById(id + "starttime").textContent;
-				const end_time = document.getElementById(id + "endtime").textContent;
-				const work_done = document.getElementById(id + "done").textContent;
-				const weekmask = document.getElementById(id + "weekmask").textContent;
-				const holidays = JSON.parse(document.getElementById(id + "holidays").textContent);
-				// Set info
-				document.getElementById("eid").value = id;
-				document.getElementById("erfid_id").value = rfid_id;
-				document.getElementById("ename").value = name;
-				document.getElementById("estatus").value = status;
-				document.getElementById("ecreatedat").value = created_at;
-				// document.getElementById("estartdate").value = SQLDateToJs(start_date);
-				// document.getElementById("eenddate").value = SQLDateToJs(end_date);
-				document.getElementById("estarttime").value = SQLTimeToJs(start_time);
-				document.getElementById("eendtime").value = SQLTimeToJs(end_time);
-				document.getElementById("edoneseconds").value = work_done;
-				document.getElementById("eweekmask").value = weekmask;
 
-				const calendar = document.getElementById("calendar");
-				calendar.year = (new Date()).getFullYear();
-				calendar.month = (new Date()).getMonth() + 1;
-				calendar.startDate = SQLDateToJs(start_date);
-				calendar.endDate = SQLDateToJs(end_date);
-				calendar.weekmask = weekmask;
-				calendar.holidays = holidays;
-			}, false);
-		});
-		Array.from(document.querySelectorAll(".delete-button")).map((button) => {
-			if (button.dataset.id == undefined) {
-				return;
-			}
-			button.addEventListener("click", () => {
-				const id = button.dataset.id;
-				socket.emit("delete_student", {id : id});
-				document.getElementById(`${id}tr`).remove();
-			}, false);
-		});
+		window.editStudent = (student) => {
+			Alpine.store('edit').student = student;
+			Alpine.store('edit').editing = true;
+
+			const calendar = document.getElementById("calendar");
+			calendar.year = (new Date()).getFullYear();
+			calendar.month = (new Date()).getMonth() + 1;
+			calendar.startDate = SQLDateToJs(student.start_date);
+			calendar.endDate = SQLDateToJs(student.end_date);
+			calendar.weekmask = student.weekmask;
+			calendar.holidays = JSON.parse(student.excluded_days);
+		}
+		window.deleteStudent = (student) => {
+			socket.emit("delete_student", {id : student.id});
+		}
 
 		const editForm = document.getElementById('edit');
 		editForm.addEventListener('submit', (event) => {
 			event.preventDefault();
-
-			const id = document.getElementById("eid").value;
-			// const rfid_id = document.getElementById("erfid_id").value;
-			const name = document.getElementById("ename").value;
-			const status = document.getElementById("estatus").value;
-
-			const start_time = jsTimeToSQL(document.getElementById("estarttime").value);
-			const end_time = jsTimeToSQL(document.getElementById("eendtime").value);
-			const created_at = document.getElementById("ecreatedat").value;
-			
-			const start_date = jsDateToSQL(document.getElementById("calendar").startDate,
-										  document.getElementById("estarttime").value);
-			const end_date = jsDateToSQL(document.getElementById("calendar").endDate,
-										 document.getElementById("eendtime").value);
-			const holidays = document.getElementById("calendar").holidays;
-			
-			const done_seconds = document.getElementById("edoneseconds").value;
-			const weekmask = document.getElementById("eweekmask").value;
-			
-			socket.emit("edit_student", {id : id,
-										 name : name, status : status, start_date : start_date,
-										 end_date : end_date, start_time : start_time,
-										 end_time: end_time, done_seconds : done_seconds,
-										 weekmask : weekmask, holidays : JSON.stringify(holidays)});
+			const new_student = Alpine.store('edit').student;
+			const dates = { start_date : jsDateToSQL(document.getElementById("calendar").startDate,
+													 new_student.start_time),
+							end_date : jsDateToSQL(document.getElementById("calendar").endDate,
+												   new_student.end_time),
+							excluded_days : JSON.stringify(document.getElementById("calendar").holidays)
+						  };
+			Object.assign(new_student, dates);
+			socket.emit("edit_student", new_student);
 			return false;
 		});
-
-		let day;
+		
+		Alpine.start();
 	</script>
 </html>

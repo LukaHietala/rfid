@@ -3,7 +3,7 @@ from datetime import datetime
 import time
 
 date_format = '%d.%m.%Y %H:%M:%S' # 10.8.2026 12:12:12
-time_format = '%H.%M' # 10:20
+time_format = '%H:%M' # 10:20
 weekmask_regex = '^[0,1]{7}$' # 1111100
 
 def validate_weekmask(weekmask):
@@ -23,10 +23,3 @@ def to_datetime(date_str):
 
 def to_time(time_str):
     return datetime.strptime(time_str, time_format).time()
-
-def seconds_to_human(seconds):
-    hours = int(seconds) // 3600
-    minutes = (int(seconds) % 3600) // 60
-
-    return f'{hours} t {minutes} min'
-    

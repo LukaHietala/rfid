@@ -10,10 +10,6 @@ def read_tag(reader):
     id, data = reader.read()
     return id, data.strip()
 
-def write_data(reader, data):
-    id, written = reader.write(data)
-    return id, written
-
 def start_logger(new_scan):
     reader = SimpleMFRC522()
 
@@ -41,7 +37,7 @@ def start_logger(new_scan):
             if student:
                 new_status = toggle_student_status(student["id"])
                 log_scan(student["rfid_id"], student["name"])
-                new_scan({"found" : True , "name" : student["name"], "id" : student["id"], "status" : new_status})
+                new_scan({"found" : True , "name" : student["name"], "id" : student["id"], "status" : new_status, "rfid_id" : student["rfid_id"]})
                 
                 print("Found student:", student)
             else:

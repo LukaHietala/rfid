@@ -15,7 +15,7 @@
 						<p style="font-size: large;" x-text="student.name"></p>
 						<p class="extra" style="margin: 4px 0 0 0;
 												font-size: small;">Töitä jäljellä:
-							<span x-text="student.remaining"></span>
+							<span x-text="secondsToHuman(student.remaining)"></span>
 						</p>
 					</div>
 				</template>
@@ -29,11 +29,23 @@
 		const socket = io();
 		window.Alpine = Alpine;
 
-		const response = await fetch("/api/students");
-		Alpine.store('info', {
-			students: await response.json()
-		});
-		
+        async function getStudents() {
+			try {
+				const response = await fetch("/api/students");
+				if (!response.ok) {
+					throw new Error("Jotain meni pieleen: " + response.status)
+				}
+				Alpine.store('info', {
+					students: await response.json()
+				});
+			} catch (e) {
+				console.error(e.message)
+			} finally {
+				studentTimer = setTimeout(() => {getStudents()}, 60 * 1000)
+			}
+        }
+        await getStudents();
+				
 		socket.on('new_scan', (data) => {
 			if (!data.found) {
 				const msg = data.msg;
@@ -48,19 +60,18 @@
 			
 		socket.on('new_student', (data) => {
 			Alpine.store('info').students.push(data);
-			popup(`Uusi oppilas: ${data.name} (${data.id})`);
+			popup(`Uusi oppilas: ${data.name}`);
 		})
 
 		socket.on('remove_student', (data) => {
-			Alpine.store('info').students =
-				Alpine.store('info').students.filter((student) => student.id != data.id);
-			popup(`Poistettu oppilas: ${data.id}`);
+			Alpine.store('info').students = Alpine.store('info').students.filter((student) => student.id != data.id);
+			popup(`Poistettu oppilas: ${data.name}`);
 		})
 	
 		socket.on('update_student', (data) => {
 			const index = Alpine.store('info').students.findIndex((student) => student.id == data.id);
 			Alpine.store('info').students[index] = data;
-			popup(`Päivitetty oppilas: ${data.name} (${data.id})`);
+			popup(`Päivitetty oppilas: ${data.name}`);
 		})
 
 		Alpine.start();

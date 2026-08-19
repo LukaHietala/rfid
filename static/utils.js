@@ -10,49 +10,13 @@ function popup(text) {
     popupElement.innerHTML = text
 
     timer = setTimeout(function() {
-            popupElement.innerHTML = ""
+        popupElement.innerHTML = ""
     }, 5000);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+function secondsToHuman(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours} t ${minutes} min`;
+}
 

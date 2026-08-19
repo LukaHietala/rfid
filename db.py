@@ -108,6 +108,7 @@ def get_students(limit=1000):
         student["remaining"] = remaining
         students.append(student)
 
+    con.commit()
     con.close()
 
     return students
@@ -128,7 +129,9 @@ def get_student(rfid_id):
         remaining = get_student_remaining(student)
         student["remaining"] = remaining
 
+    con.commit()
     con.close()
+
     return student
 
 def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100", excluded_days="[]"):
@@ -139,7 +142,7 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
     cur = con.cursor()
 
     # Date format is: '%d.%m.%Y %H:%M:%S' - 20.08.2026 12:52:36
-    # Time format is: '%H.%M' - 8.00
+    # Time format is: '%H:%M' - 08:00
     # Weekmask: '1111100' - 1 is work day, 0 is free day
     cur.execute("""
         INSERT INTO students (rfid_id, name, created_at, start_date, end_date, start_time, end_time, weekmask, excluded_days)
@@ -147,12 +150,15 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
         RETURNING *
     """, (str(rfid_id), name, timestamp, start_date, end_date, start_time, end_time, weekmask, excluded_days))
 
-    student = cur.fetchone()
+    student = dict_from_row(cur.fetchone())
+    if student:
+        remaining = get_student_remaining(student)
+        student["remaining"] = remaining
 
     con.commit()
     con.close()
 
-    return dict_from_row(student)
+    return student
 
 def update_student(student_id, name, start_date, end_date, start_time, end_time, done_seconds, weekmask="1111100", excluded_days="[]"):
     con = get_connection()
@@ -160,7 +166,7 @@ def update_student(student_id, name, start_date, end_date, start_time, end_time,
     cur = con.cursor()
 
     # Date format is: '%d.%m.%Y %H:%M:%S' - 20.08.2026 12:52:36
-    # Time format is: '%H.%M' - 8.00
+    # Time format is: '%H:%M' - 08:00
     # Weekmask: '1111100' - 1 is work day, 0 is free day
     cur.execute("""
         UPDATE students 
@@ -170,29 +176,40 @@ def update_student(student_id, name, start_date, end_date, start_time, end_time,
         RETURNING *
     """, (name, start_date, end_date, start_time, end_time, done_seconds, weekmask, excluded_days, student_id,))
 
-    student = cur.fetchone()
+    student = dict_from_row(cur.fetchone())
+    if student:
+        remaining = get_student_remaining(student)
+        student["remaining"] = remaining
 
     con.commit()
     con.close()
 
-    return dict_from_row(student)
+    return student
 
 def remove_student(id):
     """
     Deletes a student from the database by id
     """
     con = get_connection()
+    con.row_factory = sqlite3.Row
     cur = con.cursor()
 
     cur.execute("""
         DELETE FROM students
         WHERE id = ?
+        RETURNING *
     """, (id,))
+
+
+    student = dict_from_row(cur.fetchone())
+    if student:
+        remaining = get_student_remaining(student)
+        student["remaining"] = remaining
 
     con.commit()
     con.close()
 
-    return id
+    return student
 
 def toggle_student_status(id):
     con = get_connection()
@@ -284,6 +301,7 @@ def add_excluded_days(excluded_days : list[str]):
     for student in students:
         new_excluded = json.loads(student["excluded_days"])
         new_excluded += excluded_days
+        new_excluded = list(set(new_excluded))
         
         cur.execute("""
         UPDATE students 

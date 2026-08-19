@@ -5,10 +5,11 @@
 body {
     font-family: sans-serif;
     margin: 0;
+    line-height: 1.5;
 }
 
 main {
-    margin: 40px auto;
+    margin: 100px auto;
     max-width: 800px;
 }
 
