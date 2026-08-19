@@ -177,7 +177,7 @@ def update_student(student_id, name, start_date, end_date, start_time, end_time,
 
     return dict_from_row(student)
 
-def remove_student(student_id):
+def remove_student(id):
     """
     Deletes a student from the database by id
     """
@@ -187,10 +187,12 @@ def remove_student(student_id):
     cur.execute("""
         DELETE FROM students
         WHERE id = ?
-    """, (student_id,))
+    """, (id,))
 
     con.commit()
     con.close()
+
+    return id
 
 def toggle_student_status(id):
     con = get_connection()

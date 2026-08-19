@@ -2,7 +2,7 @@ import threading
 import json
 
 from flask import Flask
-from flask import render_template
+from flask import render_template, jsonify
 from flask_socketio import SocketIO, emit
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -38,16 +38,16 @@ def admin():
 def add_student(json):
     socketio.emit('new_student', create_student(json["rfid_id"], json["name"], "13.08.2026 12:52:36", "20.08.2026 12:52:36", "8.00", "16.00"))
     
-@socketio.on('edit_student')
-def edit_student(json):
-    new = update_student(json["id"],  json["name"], json["start_date"],
-                         json["end_date"], json["start_time"], json["end_time"],
-                         json["done_seconds"], json["weekmask"], json["holidays"])
-    socketio.emit('update_student', new)
-
 @socketio.on('delete_student')
 def delete_student(json):
-    remove_student(json["id"])
+    socketio.emit('remove_student', { 'id': remove_student(json["id"]) })
+
+@socketio.on('edit_student')
+def edit_student(json):
+    updated_student = update_student(json["id"],  json["name"], json["start_date"],
+                         json["end_date"], json["start_time"], json["end_time"],
+                         json["done_seconds"], json["weekmask"], json["holidays"])
+    socketio.emit('update_student', updated_student)
     
 @socketio.on('set_workdays')
 def set_workdays(json):
@@ -56,6 +56,10 @@ def set_workdays(json):
 @socketio.on('add_holidays')
 def add_holidays(json):
     add_excluded_days(json["holidays"])
+
+@app.route("/api/students", methods=["GET"])
+def get_students_json():
+    return jsonify(get_students()), 200
 
 if __name__ == "__main__":
     # Listen to RFID reader

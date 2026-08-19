@@ -41,7 +41,7 @@ def start_logger(new_scan):
             if student:
                 new_status = toggle_student_status(student["id"])
                 log_scan(student["rfid_id"], student["name"])
-                new_scan({"found" : True , "name" : student["name"], "rfid_id" : student["rfid_id"], "status" : new_status})
+                new_scan({"found" : True , "name" : student["name"], "id" : student["id"], "status" : new_status})
                 
                 print("Found student:", student)
             else:

@@ -9,55 +9,60 @@
 	<body>
         <main x-data>
             <p id="popup" class="popup"></p>
-            {% if students %}
-                <div class="student-list">
-					<template x-for="student in $store.info.students">
-						<div class="selected-item">
-							<p style="font-size: large;" x-text="student.name"></p>
-							<p class="extra" style="margin: 4px 0 0 0;
-							font-size: small;">Töitä jäljellä: <span x-text="student.remaining"></span></p>
-						</div>
-					</template>
-                </div>
-            {% else %}
-                <p >Ei oppilaita</p>
-            {% endif %}
+            <div class="student-list">
+				<template x-for="student in $store.info.students">
+					<div :class="student.status == 'IN' ? 'selected-item' : 'disabled-item'">
+						<p style="font-size: large;" x-text="student.name"></p>
+						<p class="extra" style="margin: 4px 0 0 0;
+												font-size: small;">Töitä jäljellä:
+							<span x-text="student.remaining"></span>
+						</p>
+					</div>
+				</template>
+            </div>
         </main>
 	</body>	
 	<script type="module">
-        import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
-		import Alpine from 'https://cdn.jsdelivr.net/npm/alpinejs@3.16.2/+esm'
+        import { io } from "/static/socketio.js";
+		import Alpine from "/static/alpine.js";
+
 		const socket = io();
 		window.Alpine = Alpine;
 
+		const response = await fetch("/api/students");
 		Alpine.store('info', {
-			students: [{name : "moi", status : "moi"}]
-		})
+			students: await response.json()
+		});
 		
 		socket.on('new_scan', (data) => {
-			const id = data.rfid_id;
-			const name = data.name;
-			const msg = data.msg;
-			const status = data.status;
-			const in_database = data.found;
-            const card = document.getElementById(id)
-    
-			// Update table
-			if (!in_database) {
+			if (!data.found) {
+				const msg = data.msg;
                return popup(msg)
 			}
-            
-            if (status === "IN") {
-			    card.classList.remove("disabled-item")
-			    card.classList.add("selected-item")
-            } else {
-			    card.classList.remove("selected-item")
-			    card.classList.add("disabled-item")
-            }
-
-			const popupText = `Uusi skannaus: ${name} (${id})`
-			popup(popupText);
+			const id = data.id;
+			const name = data.name;
+			const status = data.status;
+			Alpine.store('info').students.find((student) => student.id == id).status = status;
+			popup(`Uusi skannaus: ${name}`);
 		})
+			
+		socket.on('new_student', (data) => {
+			Alpine.store('info').students.push(data);
+			popup(`Uusi oppilas: ${data.name} (${data.id})`);
+		})
+
+		socket.on('remove_student', (data) => {
+			Alpine.store('info').students =
+				Alpine.store('info').students.filter((student) => student.id != data.id);
+			popup(`Poistettu oppilas: ${data.id}`);
+		})
+	
+		socket.on('update_student', (data) => {
+			const index = Alpine.store('info').students.findIndex((student) => student.id == data.id);
+			Alpine.store('info').students[index] = data;
+			popup(`Päivitetty oppilas: ${data.name} (${data.id})`);
+		})
+
 		Alpine.start();
 	</script>
 </html>
