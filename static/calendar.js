@@ -36,6 +36,7 @@ class Calendar extends HTMLElement {
 		#title;
 		// Last row, internal use
 		#lastRow;
+		#secondLastRow;
 		// Year
 		#year = (new Date()).getFullYear();
 		get year() {
@@ -73,7 +74,7 @@ class Calendar extends HTMLElement {
 				this.#reindeer();
 		}
 		
-		#startDate = "9999-99-99";
+		#startDate = null;
 		get startDate() {
 				return this.#startDate
 		}
@@ -82,7 +83,7 @@ class Calendar extends HTMLElement {
 				this.#reindeer();
 		}
 		
-		#endDate = "0000-00-00";
+		#endDate = null;
 		get endDate() {
 				return this.#endDate
 		}
@@ -110,13 +111,18 @@ class Calendar extends HTMLElement {
 		
 		#reindeer() {
 				const startDay = (new Date(this.#year, this.#month - 1, 0)).getDay();
-				const days = Calendar.daysInMonth(this.#year, this.#month - 1);
+				const days = Calendar.daysInMonth(this.#year, this.#month);
 				this.#title.textContent = `Kalenteri (${Calendar.pad(this.#month)}.${this.#year})`;
 
-				if (days + startDay <= 35) {
-						this.#lastRow.setAttribute("hidden", null);
-				} else {
-						this.#lastRow.removeAttribute("hidden");
+				if (days + startDay == 28) {
+						this.#secondLastRow.setAttribute("hidden", null);
+				}	else {
+						this.#secondLastRow.removeAttribute("hidden");
+						if (days + startDay > 35) {
+								this.#lastRow.removeAttribute("hidden");
+						} else {
+								this.#lastRow.setAttribute("hidden", null);
+						}
 				}
 				
 				this.#squares.forEach((div) => {
@@ -137,7 +143,8 @@ class Calendar extends HTMLElement {
 								div.setAttribute("bgcolor", "#ffff00");
 						} else if (this.#holidays.includes(date) || this.#weekmask[weekday] == '0') {
 								div.setAttribute("bgcolor", "#ff0000");
-						} else if (Calendar.dateValue(date) > Calendar.dateValue(this.#startDate) && Calendar.dateValue(date) < Calendar.dateValue(this.#endDate)) {
+						} else if (this.#startDate != null && this.#endDate != null &&
+											 Calendar.dateValue(date) > Calendar.dateValue(this.#startDate) && Calendar.dateValue(date) < Calendar.dateValue(this.#endDate)) {
 								div.setAttribute("bgcolor", "#bbbbbb");
 						} else {
 								div.setAttribute("bgcolor", "#ffffff");
@@ -215,7 +222,7 @@ class Calendar extends HTMLElement {
 												}
 												const day = b.textContent;
 												const date = `${_self.#year}-${Calendar.pad(_self.#month)}-${Calendar.pad(day)}`;
-												if (!e.altKey && !e.ctrlKey) {
+												if (!e.shiftKey) {
 														if (_self.#holidays.includes(date)) {
 																const index = _self.#holidays.indexOf(date);
 																_self.#holidays.splice(index, 1);
@@ -225,10 +232,13 @@ class Calendar extends HTMLElement {
 																b.setAttribute("bgcolor", "#ff0000");
 														}
 												} else {
-														if (e.altKey) {
+														if (!_self.#startDate) {
 																_self.#startDate = date;
-														}else {
+														} else if (!_self.#endDate) {
 																_self.#endDate = date;
+														} else {
+																_self.#startDate = date;
+																_self.#endDate = null;
 														}
 														_self.#reindeer();
 												}
@@ -238,6 +248,7 @@ class Calendar extends HTMLElement {
 								})();
 								rowDiv.appendChild(box);
 						}
+						this.#secondLastRow = this.#lastRow;
 						this.#lastRow = rowDiv;
 						table.appendChild(rowDiv);
 				}

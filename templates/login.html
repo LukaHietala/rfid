@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirjaudu</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: sans-serif;
+            margin: 0;
+        }
+
+        main {
+            margin: 40px auto;
+            max-width: 400px;
+            padding: 0 20px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h3>Kirjaudu</h3>
+        <form method="POST">
+            <input type="password" name="password" placeholder="Salasana" required>
+            <button type="submit">Kirjaudu</button>
+        </form>
+        {% if wrong_pass %}
+            <p>Väärä salasana!</p>
+        {% endif %}
+    </main>
+</body>
+</html>

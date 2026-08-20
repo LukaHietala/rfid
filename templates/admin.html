@@ -18,31 +18,43 @@
 
             main {
                 margin: 40px auto;
-                max-width: 1200px;
+                max-width: 1000px;
+                padding: 0 20px;
             }
 
             .students-table {
                 text-align: left;
-                border: 1px solid #ccc;
+                border: 1px solid gray;
                 border-collapse: collapse;
                 width: 100%;
             }
 
             .students-table th, td {
-                padding: 12px 16px;
+                padding: 8px 12px;
             }
 		</style>
 	</head>
 	<body x-data="{ editing: false }">
         <main>
-            <p id="popup" class="popup"></p>
             <h1>Oppilaat</h1>
+            <p id="popup" class="popup"></p>
+            <form id="add" x-data="{ calendar_open: false }">
+                <fieldset style="border: 1px solid gray; margin: 6px 0;">
+                    <legend>Lisää oppilas</legend>
+                    <label for="name">Nimi</label>
+                    <input type="text" name="name" x-model="$store.add.name" required>
+                    <label for="rfid_id">RFID ID (Skannaa tagi)</label>
+                    <input type="text" name="name" x-model="$store.add.rfid_id" disabled required>
+                    <button type="button" x-on:click="calendar_open = ! calendar_open">Kalenteri</button>
+                    <button type="submit">Luo</button>
+					<calendar-component id="add_calendar" x-show="calendar_open"></calendar-component>
+                </fieldset>
+            </form>
             <table id="table" class="students-table">
                 <tr>
                     <th>Nimi</th>
                     <th>RFID ID</th>
                     <th>Tila</th>
-                    <th>Aikaväli</th>
                     <th>Työaika</th>
                     <th>Töitä tehty</th>
                     <th>Kalenteri</th>
@@ -53,11 +65,10 @@
 						<td x-text="student.name"></td>
                         <td x-text="student.rfid_id"></td>
                         <td x-text="student.status"></td>
-                        <td x-text="`${student.start_date}-${student.end_date}`"></td>
                         <td x-text="`${student.start_time}-${student.end_time}`"></td>
                         <td x-text="secondsToHuman(student.done_seconds)"></td>
                         <td>
-							<button>
+							<button x-on:click="openCalendar($event, student)">
 								Avaa
 							</button>
 						</td>
@@ -71,60 +82,54 @@
                         </td>
                     </tr>
                 </template>
+				<calendar-component id="popup_calendar"
+				x-on:click.outside="removePopup" style="display:none;"></calendar-component>
             </table>
-            <div class="grid">
-                <div class="first">
-                    <h2>Add student</h2>
-                    <form id="add">
-                        <label for="name">Nimi</label><br>
-                        <input type="text" x-model="$store.add.name"><br>
-                        <label for="rfid_id">RFID_ID</label><br>
-                        <input type="text" x-model="$store.add.rfid_id" disabled><br>
-                        <button type="submit">Luo</button>
-                    </form>
-                    <h2>Global calendar</h2>
-                    <calendar-component id="gcalendar"></calendar-component>
-                    <button id="addholidays">Add holidays</button>
-                    <button id="setworkdays">Set workdays</button>
-                </div>
-                <div class="second" x-show="$store.edit.editing">
-                    <h2>Edit student</h2>
-                    <form id="edit">
-                        <label for="id">id</label><br>
-                        <input type="text" id="id" disabled
-                               x-model="$store.edit.student.id"><br>
-                        <label for="rfid_id">RFID_ID</label><br>
-                        <input type="text" id="rfid_id" disabled
-                               x-model="$store.edit.student.rfid_id"><br>
-                        <label for="name">name</label><br>
-                        <input type="text" id="name"
-                               x-model="$store.edit.student.name"><br>			
-                        <label for="status">status</label><br>
-                        <select id="status"
+            <div x-show="$store.edit.editing">
+                <form id="edit">
+                    <fieldset style="border: 1px solid gray; margin: 6px 0; display: flex; flex-direction: row; gap: 12px;">
+                        <legend x-text="`Muokataan: ${$store.edit.student.name}`"></legend>
+                        <div>
+                            <label for="id">ID</label><br>
+                            <input type="text" id="id" disabled
+                                x-model="$store.edit.student.id"><br>
+                            <label for="rfid_id">RFID ID</label><br>
+                            <input type="text" id="rfid_id" disabled
+                                x-model="$store.edit.student.rfid_id"><br>
+                            <label for="name">Nimi</label><br>
+                            <input type="text" id="name"
+                                x-model="$store.edit.student.name"><br>			
+                            <label for="status">Tila</label><br>
+                            <select id="status"
                                 x-model="$store.edit.student.status">
-                            <option value="OUT">IN</option>
-                            <option value="IN">OUT</option>
-                        </select><br>
-                        <label for="createdat">created_at</label><br>
-                        <input type="text" id="createdat" disabled
-                               x-model="$store.edit.student.created_at"><br>
-                        <label for="starttime">start_time</label><br>
-                        <input type="time" id="starttime"
-                               x-model="$store.edit.student.start_time"><br>
-                        <label for="endtime">end_time</label><br>
-                        <input type="time" id="endtime"
-                               x-model="$store.edit.student.end_time"><br>
-                        <label for="doneseconds">done_seconds</label><br>
-                        <input type="text" id="doneseconds"
-                               x-model="$store.edit.student.done_seconds"><br>
-                        <label for="weekmask">weekmask</label><br>
-                        <input type="text" id="weekmask" pattern='[0,1]{7}'
-                               x-model="$store.edit.student.weekmask"><br>
-                        <button type="submit">Muokkaa</button>
-                    </form>
-                    <h2>Student calendar</h2>
-                    <calendar-component id="calendar"></calendar-component>
+                                <option value="OUT">IN</option>
+                                <option value="IN">OUT</option>
+                            </select><br>
+                            <label for="starttime">start_time</label><br>
+                            <input type="time" id="starttime"
+                                x-model="$store.edit.student.start_time"><br>
+                            <label for="endtime">end_time</label><br>
+                            <input type="time" id="endtime"
+                                x-model="$store.edit.student.end_time"><br>
+                            <label for="doneseconds">done_seconds</label><br>
+                            <input type="text" id="doneseconds"
+                                x-model="$store.edit.student.done_seconds"><br>
+                            <label for="weekmask">weekmask</label><br>
+                            <input type="text" id="weekmask" pattern='[0,1]{7}'
+                                x-model="$store.edit.student.weekmask"><br>
+                            <button type="submit">Muokkaa</button>
+                        </div>
+                        <div>
+                            <calendar-component id="calendar"></calendar-component>
+                        </div>
+                    </fieldset>
+                </form>
                 </div>
+            <div>
+                <h2>Global calendar</h2>
+                <calendar-component id="gcalendar"></calendar-component>
+                <button id="addholidays">Add holidays</button>
+                <button id="setworkdays">Set workdays</button>
             </div>
         </main>
 	</body>
@@ -139,22 +144,22 @@
 			try {
 				const response = await fetch("/api/students");
 				if (!response.ok) {
-					throw new Error("Jotain meni pieleen: " + response.status)
+					throw new Error("Jotain meni pieleen: " + response.status);
 				}
 				Alpine.store('info', {
 					students: await response.json()
 				});
 			} catch (e) {
-				console.error(e.message)
+				console.error(e.message);
 			} finally {
-				studentTimer = setTimeout(() => {getStudents()}, 60 * 1000)
+				studentTimer = setTimeout(() => {getStudents()}, 60 * 1000);
 			}
         }
         await getStudents();
 
 		Alpine.store('add', {
-			rfid_id: "None",
-			name: "Jaakko pekka"
+			rfid_id: "",
+			name: ""
 		});
 		Alpine.store('edit', {
 			student: null,
@@ -167,6 +172,7 @@
 			if (in_database) {				
 				const name = data.name;
 				popup(`${rfid_id} on jo tietokannassa nimellä ${name}`);
+				Alpine.store('info').students.find((student) => student.id == id).status = status;
 			} else {
 				Alpine.store('add').rfid_id = rfid_id;
 				popup(`RFID_ID: ${rfid_id} skannattu! `);
@@ -200,7 +206,30 @@
 			event.preventDefault();
 			const name = Alpine.store('add').name;
 			const rfid_id = Alpine.store('add').rfid_id;
-			socket.emit("add_student", {name : name, rfid_id : rfid_id});
+			const calendar = document.getElementById("add_calendar");
+			const startTime = "08:00";
+			const endTime = "16:00";
+            if (!name) {
+                popup("Nimi vaaditaan");
+                return;
+            }
+            if (!rfid_id) {
+                popup("Skannaa RFID tagi oppilaalle");
+                return;
+            }
+            if (!calendar.endDate || !calendar.startDate || !startTime || !endTime) {
+                popup("Täytä oppilaan kalenteri");
+                return;
+            }
+			socket.emit("add_student", {
+				name : name,
+				rfid_id : rfid_id,
+				start_date : jsDateToSQL(calendar.startDate, startTime),
+				end_date : jsDateToSQL(calendar.endDate, endTime),
+				excluded_days : JSON.stringify(calendar.holidays),
+				start_time : startTime,
+				end_time : endTime
+			});
 			return false;
 		});
 
@@ -229,6 +258,12 @@
 		}
 
 		window.editStudent = (student) => {
+			if (Alpine.store('edit').editing &&
+				Alpine.store('edit').student != null &&
+				Alpine.store('edit').student.id == student.id) {
+				Alpine.store('edit').editing = false;
+				return;
+			}
 			Alpine.store('edit').student = student;
 			Alpine.store('edit').editing = true;
 
@@ -243,6 +278,30 @@
 		window.deleteStudent = (student) => {
 			socket.emit("delete_student", {id : student.id});
 		}
+
+		let popupInitialized = false;
+		window.removePopup = (() => {
+			if (popupInitialized) {
+				document.getElementById("popup_calendar").style.display = "none";
+				popupInitialized = false;
+			} else {
+				popupInitialized = true;
+			}
+		});
+		
+        window.openCalendar = (event, student) => {
+            const calendar = document.getElementById("popup_calendar");
+			calendar.style.display = "";
+			calendar.editable = false;
+			calendar.holidays = student.excluded_days;
+			calendar.startDate = SQLDateToJs(student.start_date);
+			calendar.endDate = SQLDateToJs(student.end_date);
+			calendar.weekmask = student.weekmask;
+			document.body.append(calendar);
+            calendar.style.position = "absolute"
+            calendar.style.top = `${event.clientY + 20}px`
+            calendar.style.left = `${event.clientX - (calendar.offsetWidth / 2)}px`
+        }
 
 		const editForm = document.getElementById('edit');
 		editForm.addEventListener('submit', (event) => {

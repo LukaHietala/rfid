@@ -1,8 +1,9 @@
 import threading
 import json
+import bcrypt
 
 from flask import Flask
-from flask import render_template, jsonify
+from flask import render_template, jsonify, session, redirect, request
 from flask_socketio import SocketIO, emit
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -29,11 +30,29 @@ def index():
 
 @app.route("/admin")
 def admin():
+    if not session.get("admin"):
+        return redirect("/login")
     return render_template('admin.html', students=get_students())
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        passwordBytes = (request.form.get("password")).encode("utf-8")
+        if bcrypt.checkpw(passwordBytes, b'$2b$12$L7L7.Omjx5.xNck4cTzb6uKxIQqmhdgcegAzCX3Y9d2RqwwOwti9K'):
+            session["admin"] = True
+            return redirect("/admin")
+        return render_template("login.html", wrong_pass=True)
+    return render_template("login.html", wrong_pass=False)
+
+@app.route("/logout")
+def logout():
+    session.pop("admin", None)
+    return redirect("/login")
 
 @socketio.on('add_student')
 def add_student(json):
-    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], "13.08.2026 12:52:36", "20.08.2026 12:52:36", "08:00", "16:00"))
+    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], json["start_date"], json["end_date"], json["start_time"], json["end_time"],
+                  excluded_days = json["excluded_days"]))
     
 @socketio.on('delete_student')
 def delete_student(json):
@@ -69,9 +88,9 @@ if __name__ == "__main__":
     )
     thread.start()
 
-    # Accumulate done hours for students
-    interval = 60
-    scheduler.add_job(lambda: accumulate_done(interval), 'interval', seconds=interval)
+    # Accumulate done seconds for students
+    interval = 10
+    scheduler.add_job(lambda: accumulate_done(interval), 'interval', seconds=interval, max_instances=1)
     scheduler.start()
 
     # Serve the webapp

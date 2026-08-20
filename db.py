@@ -21,7 +21,7 @@ def dict_from_row(row):
 # Accumulate done runs on a seperate thread so it might corrupt the db
 
 def get_connection():
-    return sqlite3.connect(DB_NAME, check_same_thread=False)
+    return sqlite3.connect(DB_NAME, timeout=5)
 
 def init_db():
     con = get_connection()
@@ -108,7 +108,6 @@ def get_students(limit=1000):
         student["remaining"] = remaining
         students.append(student)
 
-    con.commit()
     con.close()
 
     return students
@@ -129,7 +128,6 @@ def get_student(rfid_id):
         remaining = get_student_remaining(student)
         student["remaining"] = remaining
 
-    con.commit()
     con.close()
 
     return student
