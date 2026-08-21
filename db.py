@@ -1,3 +1,4 @@
+from calendar import week
 import sqlite3
 from datetime import datetime, timedelta, date, time
 from dateutil.relativedelta import relativedelta
@@ -45,13 +46,14 @@ def init_db():
             created_at TEXT NOT NULL,
             start_date TEXT NOT NULL,
             end_date TEXT NOT NULL,
-            start_time TEXT NOT NULL,
-            end_time TEXT NOT NULL,
+            schedule TEXT NOT NULL,
             done_seconds INTEGER NOT NULL DEFAULT 0,
             weekmask TEXT NOT NULL,
             excluded_days TEXT DEFAULT '[]'
         ) 
     """)
+
+    con.execute('pragma journal_mode=wal')
 
     con.commit()
     con.close()
@@ -132,7 +134,7 @@ def get_student(rfid_id):
 
     return student
 
-def create_student(rfid_id, name, start_date, end_date, start_time, end_time, weekmask="1111100", excluded_days="[]"):
+def create_student(rfid_id, name, start_date, end_date, schedule, weekmask="1111100", excluded_days="[]"):
     timestamp = format_datetime(datetime.now())
 
     con = get_connection()
@@ -140,13 +142,12 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
     cur = con.cursor()
 
     # Date format is: '%d.%m.%Y %H:%M:%S' - 20.08.2026 12:52:36
-    # Time format is: '%H:%M' - 08:00
     # Weekmask: '1111100' - 1 is work day, 0 is free day
     cur.execute("""
-        INSERT INTO students (rfid_id, name, created_at, start_date, end_date, start_time, end_time, weekmask, excluded_days)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO students (rfid_id, name, created_at, start_date, end_date, schedule, weekmask, excluded_days)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
-    """, (str(rfid_id), name, timestamp, start_date, end_date, start_time, end_time, weekmask, excluded_days))
+    """, (str(rfid_id), name, timestamp, start_date, end_date, schedule, weekmask, excluded_days))
 
     student = dict_from_row(cur.fetchone())
     if student:
@@ -158,21 +159,20 @@ def create_student(rfid_id, name, start_date, end_date, start_time, end_time, we
 
     return student
 
-def update_student(student_id, name, start_date, end_date, start_time, end_time, done_seconds, weekmask="1111100", excluded_days="[]"):
+def update_student(student_id, name, start_date, end_date, schedule, done_seconds, weekmask="1111100", excluded_days="[]"):
     con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
     # Date format is: '%d.%m.%Y %H:%M:%S' - 20.08.2026 12:52:36
-    # Time format is: '%H:%M' - 08:00
     # Weekmask: '1111100' - 1 is work day, 0 is free day
     cur.execute("""
         UPDATE students 
-        SET (name, start_date, end_date, start_time, end_time, done_seconds, weekmask, excluded_days) 
-        = (?, ?, ?, ?, ?, ?, ?, ?)
+        SET (name, start_date, end_date, schedule, done_seconds, weekmask, excluded_days) 
+        = (?, ?, ?, ?, ?, ?, ?)
         WHERE id = ?
         RETURNING *
-    """, (name, start_date, end_date, start_time, end_time, done_seconds, weekmask, excluded_days, student_id,))
+    """, (name, start_date, end_date, schedule, done_seconds, weekmask, excluded_days, student_id,))
 
     student = dict_from_row(cur.fetchone())
     if student:
@@ -313,33 +313,71 @@ def add_excluded_days(excluded_days : list[str]):
     return get_students()
     
 def get_student_remaining(student):
-    done_seconds = student["done_seconds"]
-    day_starts_str = student["start_time"]
-    day_ends_str = student["end_time"]
-    start_date_str = student["start_date"] 
-    end_date_str = student["end_date"]
     weekmask = student["weekmask"]
     excluded_days = json.loads(student["excluded_days"])
+    done_time = timedelta(seconds=student["done_seconds"])
+    # TODO: Validate schedule
+    schedule = json.loads(student["schedule"])
 
-    done_time = timedelta(seconds=done_seconds)
-    day_starts_time = to_time(day_starts_str)
-    day_ends_time = to_time(day_ends_str)
+    for day in schedule:
+        start_time = to_time(day["start"])
+        end_time = to_time(day["end"])
+        day["length"] = datetime.combine(date.today(), end_time) - datetime.combine(date.today(), start_time)
 
-    day_length = datetime.combine(date.today(), day_ends_time) - datetime.combine(date.today(), day_starts_time)
-
-    start_date = to_datetime(start_date_str)
-    end_date = to_datetime(end_date_str)
+    start_date = to_datetime(student["start_date"])
+    end_date = to_datetime(student["end_date"])
 
     current_date = datetime.now()
 
-    business_days = np.busday_count(
+    business_days_count = np.busday_count(
         np.datetime64(start_date.date(), "D"),
-        np.datetime64(min(current_date.date(), end_date.date()), "D") + np.timedelta64(1, "D"),
+        np.datetime64(min(current_date.date(), end_date.date() + timedelta(days=1)), "D") + np.timedelta64(1, "D"),
         weekmask=weekmask,
         holidays=excluded_days
-    )
+    ) - 1
 
-    return (((datetime.combine(date.today(), current_date.time()) - datetime.combine(date.today(), day_starts_time))) + (day_length * (business_days - 1)) - done_time).total_seconds()
+    current_day_on_schedule = list(filter(lambda day: day["name"] == datetime.now().strftime("%A"), schedule))[0]
+    print(schedule)
+    print(current_day_on_schedule)
+
+    # TODO: If start date is on holiday just have 0 in here
+    left = timedelta(days=0)
+    if str(np.datetime64("today")) in excluded_days:
+        business_days_count += 1 
+        left = timedelta(days=0)
+    elif end_date > current_date:
+        left = ((datetime.combine(date.today(), current_date.time()) -
+                  datetime.combine(date.today(), to_time(current_day_on_schedule["start"]))))
+    else:
+        left = timedelta(days=0)
+
+    offset = 0
+    i = 0
+    while i < business_days_count:
+        now = datetime.now() + timedelta(days=i)
+        dt64 = np.datetime64(now)
+        if np.is_busday([dt64], weekmask=weekmask, holidays=excluded_days)[0] == True:
+            offset += 1
+        else:
+            business_days_count += 1
+            offset += 1
+        i += 1
+
+    for n in range(offset):
+        now = datetime.now() + timedelta(days=n)
+        dt64 = np.datetime64(now)
+        if np.is_busday([dt64], weekmask=weekmask, holidays=excluded_days)[0] == False:
+            continue
+
+        date_name = now.strftime("%A")
+            
+        length = (list(filter(lambda day: day["name"] == date_name, schedule))[0]["length"])
+        left += length
+
+    remaining = left - done_time
+    return remaining.total_seconds()
+
+
     
 if __name__ == "__main__":
     init_db()

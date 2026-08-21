@@ -32,6 +32,10 @@
             .students-table th, td {
                 padding: 8px 12px;
             }
+			
+			.disabled {
+				opacity: 50%;
+			}
 		</style>
 	</head>
 	<body x-data="{ editing: false }">
@@ -55,8 +59,7 @@
                     <th>Nimi</th>
                     <th>RFID ID</th>
                     <th>Tila</th>
-                    <th>Työaika</th>
-                    <th>Töitä tehty</th>
+                    <th>Kokonaistyöaika</th>
                     <th>Kalenteri</th>
                     <th>Toiminnot</th>
                 </tr>
@@ -65,7 +68,6 @@
 						<td x-text="student.name"></td>
                         <td x-text="student.rfid_id"></td>
                         <td x-text="student.status"></td>
-                        <td x-text="`${student.start_time}-${student.end_time}`"></td>
                         <td x-text="secondsToHuman(student.done_seconds)"></td>
                         <td>
 							<button x-on:click="openCalendar($event, student)">
@@ -90,12 +92,6 @@
                     <fieldset style="border: 1px solid gray; margin: 6px 0; display: flex; flex-direction: row; gap: 12px;">
                         <legend x-text="`Muokataan: ${$store.edit.student.name}`"></legend>
                         <div>
-                            <label for="id">ID</label><br>
-                            <input type="text" id="id" disabled
-                                x-model="$store.edit.student.id"><br>
-                            <label for="rfid_id">RFID ID</label><br>
-                            <input type="text" id="rfid_id" disabled
-                                x-model="$store.edit.student.rfid_id"><br>
                             <label for="name">Nimi</label><br>
                             <input type="text" id="name"
                                 x-model="$store.edit.student.name"><br>			
@@ -105,18 +101,95 @@
                                 <option value="OUT">IN</option>
                                 <option value="IN">OUT</option>
                             </select><br>
-                            <label for="starttime">start_time</label><br>
-                            <input type="time" id="starttime"
-                                x-model="$store.edit.student.start_time"><br>
-                            <label for="endtime">end_time</label><br>
-                            <input type="time" id="endtime"
-                                x-model="$store.edit.student.end_time"><br>
                             <label for="doneseconds">done_seconds</label><br>
                             <input type="text" id="doneseconds"
                                 x-model="$store.edit.student.done_seconds"><br>
-                            <label for="weekmask">weekmask</label><br>
-                            <input type="text" id="weekmask" pattern='[0,1]{7}'
-                                x-model="$store.edit.student.weekmask"><br>
+							<div style="display: flex; flex-direction: row; gap:10px;" x-data>
+								<div style="display: flex; flex-direction: column; width: fit-content;
+											gap:5px;"
+									 :class="$store.edit.weekmask[0] ? '' : 'disabled'">
+									<span style="text-align:center;">Ma</span>
+									<input type="time"
+										   x-model="$store.edit.schedule[0].start"
+										   :disabled="!$store.edit.weekmask[0]"/>
+									<input type="time"
+										   x-model="$store.edit.schedule[0].end"
+										   :disabled="!$store.edit.weekmask[0]"/>
+									<input type="checkbox" x-model="$store.edit.weekmask[0]">
+								</div>
+								<div style="display: flex; flex-direction: column; width: fit-content;
+											gap:5px;"
+									 :class="$store.edit.weekmask[1] ? '' : 'disabled'">
+									<span style="text-align:center;">Ti</span>
+									<input type="time"
+										   x-model="$store.edit.schedule[1].start"
+										   :disabled="!$store.edit.weekmask[1]"/>
+									<input type="time"
+										   x-model="$store.edit.schedule[1].end"
+										   :disabled="!$store.edit.weekmask[1]"/>
+									<input type="checkbox" x-model="$store.edit.weekmask[1]">
+								</div>
+								<div style="display: flex; flex-direction: column; width: fit-content;
+											gap:5px;"
+									 :class="$store.edit.weekmask[2] ? '' : 'disabled'">
+									<span style="text-align:center;">Ke</span>
+									<input type="time"
+										   x-model="$store.edit.schedule[2].start"
+										   :disabled="!$store.edit.weekmask[2]"/>
+									<input type="time"
+										   x-model="$store.edit.schedule[2].end"
+										   :disabled="!$store.edit.weekmask[2]"/>
+									<input type="checkbox" x-model="$store.edit.weekmask[2]">
+								</div>
+								<div style="display: flex; flex-direction: column; width: fit-content;
+											gap:5px;"
+									 :class="$store.edit.weekmask[3] ? '' : 'disabled'">
+									<span style="text-align:center;">To</span>
+									<input type="time"
+										   x-model="$store.edit.schedule[3].start"
+										   :disabled="!$store.edit.weekmask[3]"/>
+									<input type="time"
+										   x-model="$store.edit.schedule[3].end"
+										   :disabled="!$store.edit.weekmask[3]"/>
+									<input type="checkbox" x-model="$store.edit.weekmask[3]">
+								</div>
+								<div style="display: flex; flex-direction: column; width: fit-content;
+											gap:5px;"
+									 :class="$store.edit.weekmask[4] ? '' : 'disabled'">
+									<span style="text-align:center;">Pe</span>
+									<input type="time"
+										   x-model="$store.edit.schedule[4].start"
+										   :disabled="!$store.edit.weekmask[4]"/>
+									<input type="time"
+										   x-model="$store.edit.schedule[4].end"
+										   :disabled="!$store.edit.weekmask[4]"/>
+									<input type="checkbox" x-model="$store.edit.weekmask[4]">
+								</div>
+								<div style="display: flex; flex-direction: column; width: fit-content;
+											gap:5px;"
+									 :class="$store.edit.weekmask[5] ? '' : 'disabled'">
+									<span style="text-align:center;">La</span>
+									<input type="time"
+										   x-model="$store.edit.schedule[5].start"
+										   :disabled="!$store.edit.weekmask[5]"/>
+									<input type="time"
+										   x-model="$store.edit.schedule[5].end"
+										   :disabled="!$store.edit.weekmask[5]"/>
+									<input type="checkbox" x-model="$store.edit.weekmask[5]">
+								</div>
+								<div style="display: flex; flex-direction: column; width: fit-content;
+											gap:5px;"
+									 :class="$store.edit.weekmask[6] ? '' : 'disabled'">
+									<span style="text-align:center;">Su</span>
+									<input type="time"
+										   x-model="$store.edit.schedule[6].start"
+										   :disabled="!$store.edit.weekmask[6]"/>
+									<input type="time"
+										   x-model="$store.edit.schedule[6].end"
+										   :disabled="!$store.edit.weekmask[6]"/>
+									<input type="checkbox" x-model="$store.edit.weekmask[6]">
+								</div>
+							</div>
                             <button type="submit">Muokkaa</button>
                         </div>
                         <div>
@@ -161,9 +234,12 @@
 			rfid_id: "",
 			name: ""
 		});
+		
 		Alpine.store('edit', {
 			student: null,
-			editing: false
+			editing: false,
+			weekmask: [true, false, true, false, true, false, true], // Debug value
+			schedule: null
 		});
 
 		socket.on('new_scan', (data) => {
@@ -206,9 +282,46 @@
 			event.preventDefault();
 			const name = Alpine.store('add').name;
 			const rfid_id = Alpine.store('add').rfid_id;
-			const calendar = document.getElementById("add_calendar");
-			const startTime = "08:00";
-			const endTime = "16:00";
+			const calendar = document.getElementById("add_calendar");			
+			const schedule = [
+				{
+					"name": "Monday",
+					"start": "09:00",
+					"end": "16:00"
+				},
+				{
+					"name": "Tuesday",
+					"start": "08:00",
+					"end": "16:00"
+				},
+				{
+					"name": "Wednesday",
+					"start": "08:00",
+					"end": "16:00"
+				},
+				{
+					"name": "Thursday",
+					"start": "08:00",
+					"end": "16:00"
+				},
+				{
+					"name": "Friday",
+					"start": "08:00",
+					"end": "16:00"
+				},
+				{
+					"name": "Saturday",
+					"start": "08:00",
+					"end": "16:00"
+				},
+				{
+					"name": "Sunday",
+					"start": "08:00",
+					"end": "16:00"
+				}
+			];
+		
+
             if (!name) {
                 popup("Nimi vaaditaan");
                 return;
@@ -217,18 +330,17 @@
                 popup("Skannaa RFID tagi oppilaalle");
                 return;
             }
-            if (!calendar.endDate || !calendar.startDate || !startTime || !endTime) {
+            if (!calendar.endDate || !calendar.startDate || !schedule ) {
                 popup("Täytä oppilaan kalenteri");
                 return;
             }
 			socket.emit("add_student", {
 				name : name,
 				rfid_id : rfid_id,
-				start_date : jsDateToSQL(calendar.startDate, startTime),
-				end_date : jsDateToSQL(calendar.endDate, endTime),
+				start_date : jsDateToSQL(calendar.startDate, "08:00"),
+				end_date : jsDateToSQL(calendar.endDate, "16:00"),
 				excluded_days : JSON.stringify(calendar.holidays),
-				start_time : startTime,
-				end_time : endTime
+				schedule : JSON.stringify(schedule)
 			});
 			return false;
 		});
@@ -250,12 +362,10 @@
 			return false;
 		});
 		
-		function jsDateToSQL(jsdate, time) {
-			return `${jsdate.split("-").reverse().map(Calendar.pad).join(".")} ${time}:00`;
-		}
-		function SQLDateToJs(sqldate) {
-			return (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().map(Calendar.pad).join("-");
-		}
+		const jsDateToSQL = (jsdate, time) => (`${jsdate.split("-").reverse().map(Calendar.pad).join(".")} ${time}:00`);
+		const SQLDateToJs = (sqldate) => (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().map(Calendar.pad).join("-");
+		const weekString = (arr) => (arr.reduce((str, x) => str + Number(x).toString(),""));
+		const weekArray = (str) => (str.split("").reduce((arr, c) => arr.concat(Boolean(parseInt(c))),[]));
 
 		window.editStudent = (student) => {
 			if (Alpine.store('edit').editing &&
@@ -266,6 +376,8 @@
 			}
 			Alpine.store('edit').student = student;
 			Alpine.store('edit').editing = true;
+			Alpine.store('edit').weekmask = weekArray(student.weekmask);
+			Alpine.store('edit').schedule = JSON.parse(student.schedule);
 
 			const calendar = document.getElementById("calendar");
 			calendar.year = (new Date()).getFullYear();
@@ -307,17 +419,24 @@
 		editForm.addEventListener('submit', (event) => {
 			event.preventDefault();
 			const new_student = Alpine.store('edit').student;
+			if (schedule.some((day) => day.start > day.end)) {
+			const schedule = Alpine.store('edit').schedule ;	
+			popup("Päivä ei voi alkaa sen jälkeen kuin se on loppunut");
+				return false;
+			}
+			
 			const dates = { start_date : jsDateToSQL(document.getElementById("calendar").startDate,
-													 new_student.start_time),
+													 "08:00"),
 							end_date : jsDateToSQL(document.getElementById("calendar").endDate,
-												   new_student.end_time),
-							excluded_days : JSON.stringify(document.getElementById("calendar").holidays)
+												   "16:00"),
+							excluded_days : JSON.stringify(document.getElementById("calendar").holidays),
+							weekmask : weekString(Alpine.store('edit').weekmask),
+							schedule : JSON.stringify(schedule)
 						  };
 			Object.assign(new_student, dates);
 			socket.emit("edit_student", new_student);
 			return false;
 		});
-		
 		Alpine.start();
 	</script>
 </html>

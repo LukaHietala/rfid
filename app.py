@@ -51,8 +51,8 @@ def logout():
 
 @socketio.on('add_student')
 def add_student(json):
-    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], json["start_date"], json["end_date"], json["start_time"], json["end_time"],
-                  excluded_days = json["excluded_days"]))
+    socketio.emit('new_student', create_student(json["rfid_id"], json["name"], json["start_date"], json["end_date"], json["schedule"],
+                                                excluded_days = json["excluded_days"],))
     
 @socketio.on('delete_student')
 def delete_student(json):
@@ -61,7 +61,7 @@ def delete_student(json):
 @socketio.on('edit_student')
 def edit_student(json):
     updated_student = update_student(json["id"],  json["name"], json["start_date"],
-                         json["end_date"], json["start_time"], json["end_time"],
+                         json["end_date"], json["schedule"],
                          json["done_seconds"], json["weekmask"], json["excluded_days"])
     socketio.emit('update_student', updated_student)
     
