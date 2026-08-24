@@ -15,8 +15,9 @@ function popup(text) {
 }
 
 function secondsToHuman(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours} t ${minutes} min`;
+		const hours = Math.floor(Math.abs(seconds) / 3600);
+		const minutes = Math.floor((Math.abs(seconds) % 3600) / 60);
+		return (seconds < 0) ? `Ylitöitä tehty: ${hours} t ${minutes} min`
+				: `Töitä jäljellä: ${hours} t ${minutes} min`;
 }
 

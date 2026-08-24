@@ -7,7 +7,7 @@ from flask import render_template, jsonify, session, redirect, request
 from flask_socketio import SocketIO, emit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from db import get_scans, get_students, create_student, accumulate_done, update_student, replace_workdays, add_excluded_days, remove_student
+from db import get_scans, get_students, create_student, accumulate_done, set_break_time, update_student, replace_workdays, add_excluded_days, remove_student, set_break_time, get_break_time
 from rfid import start_logger
 
 app = Flask(__name__)
@@ -60,7 +60,7 @@ def delete_student(json):
 
 @socketio.on('edit_student')
 def edit_student(json):
-    updated_student = update_student(json["id"],  json["name"], json["start_date"],
+    updated_student = update_student(json["id"],  json["name"], json["status"], json["start_date"],
                          json["end_date"], json["schedule"],
                          json["done_seconds"], json["excluded_days"])
     socketio.emit('update_student', updated_student)
@@ -74,6 +74,15 @@ def set_workdays(json):
 def add_holidays(json):
     add_excluded_days(json["holidays"])
     socketio.emit('update_all', get_students())
+
+@socketio.on('update_breaks')
+def update_breaks(json):
+    new = set_break_time(json["time"])
+    socketio.emit('update_breaks', new)
+
+@socketio.on('get_breaks')
+def get_breaks():
+    socketio.emit('update_breaks', get_break_time())
 
 @app.route("/api/students", methods=["GET"])
 def get_students_json():

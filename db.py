@@ -52,6 +52,12 @@ def init_db():
         ) 
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS breaks (
+            time INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+
     con.execute('pragma journal_mode=wal')
 
     con.commit()
@@ -157,19 +163,21 @@ def create_student(rfid_id, name, start_date, end_date, schedule, excluded_days=
 
     return student
 
-def update_student(student_id, name, start_date, end_date, schedule, done_seconds, excluded_days="[]"):
+def update_student(student_id, name, status, start_date, end_date, schedule, done_seconds, excluded_days="[]"):
     con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
+    if done_seconds == "":
+        done_seconds = 0
     # Date format is: '%d.%m.%Y' - 20.08.2026
     cur.execute("""
         UPDATE students 
-        SET (name, start_date, end_date, schedule, done_seconds, excluded_days) 
-        = (?, ?, ?, ?, ?, ?)
+        SET (name, status, start_date, end_date, schedule, done_seconds, excluded_days) 
+        = (?, ?, ?, ?, ?, ?, ?)
         WHERE id = ?
         RETURNING *
-    """, (name, start_date, end_date, schedule, done_seconds, excluded_days, student_id,))
+    """, (name, status, start_date, end_date, schedule, done_seconds, excluded_days, student_id,))
 
     student = dict_from_row(cur.fetchone())
     if student:
@@ -309,29 +317,64 @@ def add_excluded_days(excluded_days : list[str]):
         
     return get_students()
 
+def get_break_time():
+    con = get_connection()
+    cur = con.cursor()
+    
+    cur.execute("""
+        SELECT time
+        FROM breaks
+    """)
+
+    time = cur.fetchone()[0]
+
+    con.close()
+
+    return time
+
+def set_break_time(seconds):
+    con = get_connection()
+    cur = con.cursor()
+
+    cur.execute("""
+        UPDATE breaks
+        SET time = ?
+        RETURNING *
+    """, (seconds,))
+
+    row = cur.fetchone()[0]
+
+    con.commit()
+    con.close()
+
+    return row
+
 def get_student_remaining(student):    
     today = datetime.today()
     start = to_datetime(student["start_date"])
     end = to_datetime(student["end_date"])
 
+    break_per_day = timedelta(seconds=get_break_time())
+    
+    # json: ["2026-08-20"]
     excluded_days = json.loads(student["excluded_days"])
     # json: [{"start": "08:00", "end": "16:00"}, null...] (length: 7)
     schedule = json.loads(student["schedule"])
     
     # Get all work required except from today
     work_in_time = timedelta(0)
-    while start.date() != today.date():
+    while start < today:
         if start > end:
             break
         if schedule[start.weekday()] and not str(start.date()) in excluded_days:
             hours: dict[str, str] = schedule[start.weekday()]
-            work_in_time += to_time(hours["end"]) - to_time(hours["start"]) 
+            work_in_time += (to_time(hours["end"]) - to_time(hours["start"])) - break_per_day 
         start += timedelta(days=1)
     # Get work amount from today
     work_in_today = timedelta(0)
-    if start <= end:
+    if start == today:
         if schedule[start.weekday()] and not str(start.date()) in excluded_days:
-            work_in_today = today - datetime.combine(date.today(), to_time(schedule[start.weekday()]["start"]).time())
+            work_in_today = today - datetime.combine(date.today(), to_time(schedule[start.weekday()]["start"]).time()) - break_per_day
 
     done_time = timedelta(seconds=int(student["done_seconds"]))
             

@@ -98,8 +98,8 @@
                             <label for="status">Tila</label><br>
                             <select id="status"
                                 x-model="$store.edit.student.status">
-                                <option value="OUT">IN</option>
-                                <option value="IN">OUT</option>
+                                <option value="OUT">OUT</option>
+                                <option value="IN">IN</option>
                             </select><br>
                             <label for="doneseconds">done_seconds</label><br>
                             <input type="text" id="doneseconds"
@@ -203,6 +203,11 @@
                 <calendar-component id="gcalendar"></calendar-component>
                 <button id="addholidays">Add holidays</button>
                 <button id="setworkdays">Set workdays</button>
+				<br>
+				<label for="break">Taukoaikaa (minuutteja)</label><br>
+				<input type="number" name="break"
+					   x-model="$store.edit.breaktime"/>
+				<button x-on:click="updateBreaktime">Muokkaa taukoaika</button>
             </div>
         </main>
 	</body>
@@ -212,7 +217,8 @@
 		
 		const socket = io();
 		window.Alpine = Alpine;
-		
+
+		let studentTimer;
         async function getStudents() {
 			try {
 				const response = await fetch("/api/students");
@@ -225,10 +231,12 @@
 			} catch (e) {
 				console.error(e.message);
 			} finally {
+				clearTimeout(studentTimeout);
 				studentTimer = setTimeout(() => {getStudents()}, 60 * 1000);
 			}
         }
         await getStudents();
+		socket.emit("get_breaks");
 
 		Alpine.store('add', {
 			rfid_id: "",
@@ -239,9 +247,17 @@
 			student: null,
 			editing: false,
 			weekmask: null,
-			schedule: null
+			schedule: null,
+			breaktime: 0
 		});
 
+		socket.on('update_breaks', (data) => {
+			Alpine.store('edit').breaktime = data / 60;
+		});
+		window.updateBreaktime = (e) => {
+			socket.emit("update_breaks", {time : Alpine.store('edit').breaktime * 60 });
+		};
+		
 		socket.on('new_scan', (data) => {
 			const rfid_id = data.rfid_id;
 			const in_database = data.found;
@@ -286,32 +302,26 @@
 			const schedule = [
 				{
 					"start": "09:00",
-					"end": "16:00"
+					"end": "14:45"
 				},
 				{
 					"start": "08:00",
-					"end": "16:00"
+					"end": "14:45"
 				},
 				{
 					"start": "08:00",
-					"end": "16:00"
+					"end": "14:45"
 				},
 				{
 					"start": "08:00",
-					"end": "16:00"
+					"end": "14:45"
 				},
 				{
 					"start": "08:00",
-					"end": "16:00"
+					"end": "14:45"
 				},
-				{
-					"start": "08:00",
-					"end": "16:00"
-				},
-				{
-					"start": "08:00",
-					"end": "16:00"
-				}
+				null,
+				null
 			];
 		
 
@@ -335,6 +345,9 @@
 				excluded_days : JSON.stringify(calendar.holidays),
 				schedule : JSON.stringify(schedule)
 			});
+			// Empty values
+			Alpine.store('add').name = "";
+			Alpine.store('add').rfid_id = "";
 			return false;
 		});
 

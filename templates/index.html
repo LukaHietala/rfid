@@ -14,7 +14,7 @@
 					<div :class="student.status == 'IN' ? 'selected-item' : 'disabled-item'">
 						<p style="font-size: large;" x-text="student.name"></p>
 						<p class="extra" style="margin: 4px 0 0 0;
-												font-size: small;">Töitä jäljellä:
+												font-size: small;">
 							<span x-text="secondsToHuman(student.remaining)"></span>
 						</p>
 					</div>
@@ -29,6 +29,7 @@
 		const socket = io();
 		window.Alpine = Alpine;
 
+		let studentTimer;
         async function getStudents() {
 			try {
 				const response = await fetch("/api/students");
@@ -41,10 +42,11 @@
 			} catch (e) {
 				console.error(e.message)
 			} finally {
+				clearTimeout(studentTimer);
 				studentTimer = setTimeout(() => {getStudents()}, 60 * 1000)
 			}
-        }
-        await getStudents();
+		}
+		await getStudents();
 				
 		socket.on('new_scan', (data) => {
 			if (!data.found) {
