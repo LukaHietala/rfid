@@ -62,7 +62,7 @@ def delete_student(json):
 def edit_student(json):
     updated_student = update_student(json["id"],  json["name"], json["start_date"],
                          json["end_date"], json["schedule"],
-                         json["done_seconds"], json["weekmask"], json["excluded_days"])
+                         json["done_seconds"], json["excluded_days"])
     socketio.emit('update_student', updated_student)
     
 @socketio.on('set_workdays')

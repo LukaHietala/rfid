@@ -238,7 +238,7 @@
 		Alpine.store('edit', {
 			student: null,
 			editing: false,
-			weekmask: [true, false, true, false, true, false, true], // Debug value
+			weekmask: null,
 			schedule: null
 		});
 
@@ -285,37 +285,30 @@
 			const calendar = document.getElementById("add_calendar");			
 			const schedule = [
 				{
-					"name": "Monday",
 					"start": "09:00",
 					"end": "16:00"
 				},
 				{
-					"name": "Tuesday",
 					"start": "08:00",
 					"end": "16:00"
 				},
 				{
-					"name": "Wednesday",
 					"start": "08:00",
 					"end": "16:00"
 				},
 				{
-					"name": "Thursday",
 					"start": "08:00",
 					"end": "16:00"
 				},
 				{
-					"name": "Friday",
 					"start": "08:00",
 					"end": "16:00"
 				},
 				{
-					"name": "Saturday",
 					"start": "08:00",
 					"end": "16:00"
 				},
 				{
-					"name": "Sunday",
 					"start": "08:00",
 					"end": "16:00"
 				}
@@ -337,8 +330,8 @@
 			socket.emit("add_student", {
 				name : name,
 				rfid_id : rfid_id,
-				start_date : jsDateToSQL(calendar.startDate, "08:00"),
-				end_date : jsDateToSQL(calendar.endDate, "16:00"),
+				start_date : jsDateToSQL(calendar.startDate),
+				end_date : jsDateToSQL(calendar.endDate),
 				excluded_days : JSON.stringify(calendar.holidays),
 				schedule : JSON.stringify(schedule)
 			});
@@ -348,10 +341,8 @@
 		// Global calendar
 		document.getElementById("setworkdays").addEventListener('click', (event) => {
 			event.preventDefault();
-			const start = jsDateToSQL(document.getElementById("gcalendar").startDate,
-									  "08:00");
-			const end = jsDateToSQL(document.getElementById("gcalendar").endDate,
-									"16:00");
+			const start = jsDateToSQL(document.getElementById("gcalendar").startDate);
+			const end = jsDateToSQL(document.getElementById("gcalendar").endDate);
 			socket.emit("set_workdays", {start : start, end : end});
 			return false;
 		});
@@ -362,10 +353,11 @@
 			return false;
 		});
 		
-		const jsDateToSQL = (jsdate, time) => (`${jsdate.split("-").reverse().map(Calendar.pad).join(".")} ${time}:00`);
+		const jsDateToSQL = (jsdate, time) => (`${jsdate.split("-").reverse().map(Calendar.pad).join(".")}`);
 		const SQLDateToJs = (sqldate) => (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().map(Calendar.pad).join("-");
 		const weekString = (arr) => (arr.reduce((str, x) => str + Number(x).toString(),""));
 		const weekArray = (str) => (str.split("").reduce((arr, c) => arr.concat(Boolean(parseInt(c))),[]));
+		const scheduleWeekString = (schedule) => (weekString(schedule.map((x) => x != null)));
 
 		window.editStudent = (student) => {
 			if (Alpine.store('edit').editing &&
@@ -376,15 +368,18 @@
 			}
 			Alpine.store('edit').student = student;
 			Alpine.store('edit').editing = true;
-			Alpine.store('edit').weekmask = weekArray(student.weekmask);
-			Alpine.store('edit').schedule = JSON.parse(student.schedule);
+			Alpine.store('edit').schedule = JSON.parse(student.schedule).map((day) => (day == null) ?
+																			 {"start" : "08:00", "end" : "16:00"} :
+																			 day);
+			// TODO: everything
+			Alpine.store('edit').weekmask = weekArray(scheduleWeekString(JSON.parse(student.schedule)));
 
 			const calendar = document.getElementById("calendar");
 			calendar.year = (new Date()).getFullYear();
 			calendar.month = (new Date()).getMonth() + 1;
 			calendar.startDate = SQLDateToJs(student.start_date);
 			calendar.endDate = SQLDateToJs(student.end_date);
-			calendar.weekmask = student.weekmask;
+			calendar.weekmask = scheduleWeekString(JSON.parse(student.schedule));
 			calendar.holidays = JSON.parse(student.excluded_days);
 		}
 		window.deleteStudent = (student) => {
@@ -408,7 +403,7 @@
 			calendar.holidays = student.excluded_days;
 			calendar.startDate = SQLDateToJs(student.start_date);
 			calendar.endDate = SQLDateToJs(student.end_date);
-			calendar.weekmask = student.weekmask;
+			calendar.weekmask = scheduleWeekString(JSON.parse(student.schedule));
 			document.body.append(calendar);
             calendar.style.position = "absolute"
             calendar.style.top = `${event.clientY + 20}px`
@@ -419,18 +414,16 @@
 		editForm.addEventListener('submit', (event) => {
 			event.preventDefault();
 			const new_student = Alpine.store('edit').student;
-			if (schedule.some((day) => day.start > day.end)) {
-			const schedule = Alpine.store('edit').schedule ;	
-			popup("Päivä ei voi alkaa sen jälkeen kuin se on loppunut");
+			const weekmask = Alpine.store('edit').weekmask;
+			// Turn 0 days into null
+			const schedule = Alpine.store('edit').schedule.map((day, i) => (weekmask[i]) ? day : null);
+			if (schedule.some((day) => day != null && day.start > day.end)) {
+				popup("Päivä ei voi alkaa sen jälkeen kuin se on loppunut");
 				return false;
 			}
-			
-			const dates = { start_date : jsDateToSQL(document.getElementById("calendar").startDate,
-													 "08:00"),
-							end_date : jsDateToSQL(document.getElementById("calendar").endDate,
-												   "16:00"),
+			const dates = { start_date : jsDateToSQL(document.getElementById("calendar").startDate),
+							end_date : jsDateToSQL(document.getElementById("calendar").endDate),
 							excluded_days : JSON.stringify(document.getElementById("calendar").holidays),
-							weekmask : weekString(Alpine.store('edit').weekmask),
 							schedule : JSON.stringify(schedule)
 						  };
 			Object.assign(new_student, dates);
