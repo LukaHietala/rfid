@@ -58,6 +58,7 @@
 			const status = data.status;
 			Alpine.store('info').students.find((student) => student.id == id).status = status;
 			popup(`Uusi skannaus: ${name}`);
+            beep();
 		})
 			
 		socket.on('new_student', (data) => {

@@ -79,6 +79,7 @@ def log_scan(rfid_id, name):
     return timestamp
 
 def get_scans(limit=1000):
+    """ Returns all scans """
     con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
@@ -95,6 +96,7 @@ def get_scans(limit=1000):
     return [dict(row) for row in rows]
 
 def get_students(limit=1000):
+    """ Returns all students. """
     con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
@@ -119,6 +121,7 @@ def get_students(limit=1000):
     return students
 
 def get_student(rfid_id):
+    """ Gets student based on rfid_id and retunrns it """
     con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
@@ -139,6 +142,7 @@ def get_student(rfid_id):
     return student
 
 def create_student(rfid_id, name, start_date, end_date, schedule, excluded_days="[]"):
+    """ Creates a student and returns it """
     timestamp = format_datetime(datetime.now())
 
     con = get_connection()
@@ -163,12 +167,14 @@ def create_student(rfid_id, name, start_date, end_date, schedule, excluded_days=
     return student
 
 def update_student(student_id, name, status, start_date, end_date, schedule, done_seconds, excluded_days="[]"):
+    """ Updates a student and returns it. """
     con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
+    
+    if not isinstance(done_seconds, int):
+        done_seconds = max(0, done_seconds)
 
-    if done_seconds == "":
-        done_seconds = 0
     # Date format is: '%d.%m.%Y' - 20.08.2026
     cur.execute("""
         UPDATE students 
@@ -190,7 +196,8 @@ def update_student(student_id, name, status, start_date, end_date, schedule, don
 
 def remove_student(id):
     """
-    Deletes a student from the database by id
+    Deletes a student from the database by id.
+    Returns deleted student
     """
     con = get_connection()
     con.row_factory = sqlite3.Row
@@ -214,6 +221,10 @@ def remove_student(id):
     return student
 
 def toggle_student_status(id):
+    """
+    Toggles student status between "IN" and "OUT"
+    Return updated status
+    """
     con = get_connection()
     cur = con.cursor()
 
@@ -250,6 +261,10 @@ def toggle_student_status(id):
 
 
 def accumulate_done(interval):
+    """
+    Accumulates done_seconds every interval.
+    Returns updated students
+    """
     con = get_connection()
     con.row_factory = sqlite3.Row
     cur = con.cursor()
@@ -273,7 +288,7 @@ def accumulate_done(interval):
 def replace_workdays(start_date, end_date):
     """    
     Replace the starting and ending dates of all students.    
-    :returns: updated students table
+    Returns updated students table
     """
     con = get_connection()
     con.row_factory = sqlite3.Row
@@ -293,13 +308,13 @@ def replace_workdays(start_date, end_date):
 def add_excluded_days(excluded_days : list[str]):
     """
     Adds excluded_days to all students, without overwriting
-    existing days
-    :returns: updated students table
+    existing days. Returns updated students table.
     """
-    students = get_students()
 
     con = get_connection()
     cur = con.cursor()
+
+    students = get_students()
     for student in students:
         new_excluded = json.loads(student["excluded_days"])
         new_excluded += excluded_days
@@ -317,6 +332,7 @@ def add_excluded_days(excluded_days : list[str]):
     return get_students()
 
 def get_break_time():
+    """ Gets break time in seconds """
     con = get_connection()
     cur = con.cursor()
     
@@ -332,6 +348,7 @@ def get_break_time():
     return time
 
 def set_break_time(seconds):
+    """ Sets break time in seconds """
     con = get_connection()
     cur = con.cursor()
 
@@ -349,29 +366,38 @@ def set_break_time(seconds):
     return row
 
 def get_student_remaining(student):    
+    """ Returns student's remaining time for working in seconds """
+
+    # Dates for when the work starts and ends
     today = datetime.today()
     start = to_datetime(student["start_date"])
     end = to_datetime(student["end_date"])
 
+    # Break time in a day in seconds
     break_per_day = timedelta(seconds=get_break_time())
-    
+    # List of days to exclude in calculations, such as holidays
     # json: ["2026-08-20"]
     excluded_days = json.loads(student["excluded_days"])
+    # Students schedule, null is free day
     # json: [{"start": "08:00", "end": "16:00"}, null...] (length: 7)
     schedule = json.loads(student["schedule"])
+    # Done work in seconds
+    done_time = timedelta(seconds=int(student["done_seconds"]))
     
-    # Get all work required except from today
+    # Accumulate required work time
+    # Between start and today, days after end are not included
     work = timedelta(0)
     while start.date() <= today.date():
+        # Stop when end date is reached
         if start > end:
             break
+        # Skip weekends and excluded_days
         if schedule[start.weekday()] and not str(start.date()) in excluded_days:
+            # Accumulate required work
             hours: dict[str, str] = schedule[start.weekday()]
             work += (to_time(hours["end"]) - to_time(hours["start"])) - break_per_day 
         start += timedelta(days=1)
-
-    done_time = timedelta(seconds=int(student["done_seconds"]))
-            
+    
     return (work - done_time).total_seconds()
 
 if __name__ == "__main__":

@@ -25,3 +25,20 @@ function secondsToHuman(seconds) {
 		return `${hours} t ${minutes} min`;
 }
 
+// ALLOW chrome://flags/  or about:config autoplay!
+function beep() {
+    const audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    gainNode.gain.value = 1;
+    oscillator.frequency.value = 1200;
+    oscillator.type = "sine";
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.2);
+}

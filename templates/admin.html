@@ -42,18 +42,18 @@
         <main>
             <h1>Oppilaat</h1>
             <p id="popup" class="popup"></p>
-            <form id="add" x-data="{ calendar_open: false }">
-                <fieldset style="border: 1px solid gray; margin: 6px 0;">
-                    <legend>Lisää oppilas</legend>
-                    <label for="name">Nimi</label>
-                    <input type="text" name="name" x-model="$store.add.name" required>
-                    <label for="rfid_id">RFID ID (Skannaa tagi)</label>
-                    <input type="text" name="name" x-model="$store.add.rfid_id" disabled required>
-                    <button type="button" x-on:click="calendar_open = ! calendar_open">Kalenteri</button>
-                    <button type="submit">Luo</button>
-					<calendar-component id="add_calendar" x-show="calendar_open"></calendar-component>
-                </fieldset>
-            </form>
+            <fieldset style="border: 1px solid gray; margin: 6px 0;"
+					  x-data="{ calendar_open: false }">
+
+                <legend>Lisää oppilas</legend>
+                <label for="name">Nimi</label>
+                <input type="text" name="name" x-model="$store.add.name" required>
+                <label for="rfid_id">RFID ID (Skannaa tagi)</label>
+                <input type="text" name="name" x-model="$store.add.rfid_id" disabled required>
+                <button type="button" x-on:click="calendar_open = ! calendar_open">Kalenteri</button>
+                <button type="submit" x-on:click="addstudent">Luo</button>
+				<calendar-component id="add_calendar" x-show="calendar_open"></calendar-component>
+            </fieldset>
             <table id="table" class="students-table">
                 <tr>
                     <th>Nimi</th>
@@ -88,123 +88,121 @@
 				x-on:click.outside="removePopup" style="display:none;"></calendar-component>
             </table>
             <div x-show="$store.edit.editing">
-                <form id="edit">
-                    <fieldset style="border: 1px solid gray; margin: 6px 0; display: flex; flex-direction: row; gap: 12px;">
-                        <legend x-text="`Muokataan: ${$store.info.students[$store.edit.student_index].name}`"></legend>
-                        <div>
-                            <label for="name">Nimi</label><br>
-                            <input type="text" id="name"
-                                x-model="$store.info.students[$store.edit.student_index].name"><br>			
-                            <label for="status">Tila</label><br>
-                            <select id="status"
+                <fieldset style="border: 1px solid gray; margin: 6px 0; display: flex; flex-direction: row; gap: 12px;">
+                    <legend x-text="`Muokataan: ${$store.info.students[$store.edit.student_index].name}`"></legend>
+                    <div>
+                        <label for="name">Nimi</label><br>
+                        <input type="text" id="name"
+                               x-model="$store.info.students[$store.edit.student_index].name"><br>			
+                        <label for="status">Tila</label><br>
+                        <select id="status"
                                 x-model="$store.info.students[$store.edit.student_index].status">
-                                <option value="OUT">OUT</option>
-                                <option value="IN">IN</option>
-                            </select><br>
-							<button x-on:click="addTime(-60)">- 1 h </button>
-							<button x-on:click="addTime(-10)">- 10 min </button>
-                            <span x-text="secondsToHuman($store.info.students[$store.edit.student_index].done_seconds)"></span>
-							<button x-on:click="addTime(10)">+ 10 min </button>
-							<button x-on:click="addTime(60)">+ 1 h </button><br>
-							<div style="display: flex; flex-direction: row; gap:10px;" x-data>
-								<div style="display: flex; flex-direction: column; width: fit-content;
-											gap:5px;"
-									 :class="$store.edit.weekmask[0] ? '' : 'disabled'">
-									<span style="text-align:center;">Ma</span>
-									<input type="time"
-										   x-model="$store.edit.schedule[0].start"
-										   :disabled="!$store.edit.weekmask[0]"/>
-									<input type="time"
-										   x-model="$store.edit.schedule[0].end"
-										   :disabled="!$store.edit.weekmask[0]"/>
-									<input type="checkbox" x-model="$store.edit.weekmask[0]">
-								</div>
-								<div style="display: flex; flex-direction: column; width: fit-content;
-											gap:5px;"
-									 :class="$store.edit.weekmask[1] ? '' : 'disabled'">
-									<span style="text-align:center;">Ti</span>
-									<input type="time"
-										   x-model="$store.edit.schedule[1].start"
-										   :disabled="!$store.edit.weekmask[1]"/>
-									<input type="time"
-										   x-model="$store.edit.schedule[1].end"
-										   :disabled="!$store.edit.weekmask[1]"/>
-									<input type="checkbox" x-model="$store.edit.weekmask[1]">
-								</div>
-								<div style="display: flex; flex-direction: column; width: fit-content;
-											gap:5px;"
-									 :class="$store.edit.weekmask[2] ? '' : 'disabled'">
-									<span style="text-align:center;">Ke</span>
-									<input type="time"
-										   x-model="$store.edit.schedule[2].start"
-										   :disabled="!$store.edit.weekmask[2]"/>
-									<input type="time"
-										   x-model="$store.edit.schedule[2].end"
-										   :disabled="!$store.edit.weekmask[2]"/>
-									<input type="checkbox" x-model="$store.edit.weekmask[2]">
-								</div>
-								<div style="display: flex; flex-direction: column; width: fit-content;
-											gap:5px;"
-									 :class="$store.edit.weekmask[3] ? '' : 'disabled'">
-									<span style="text-align:center;">To</span>
-									<input type="time"
-										   x-model="$store.edit.schedule[3].start"
-										   :disabled="!$store.edit.weekmask[3]"/>
-									<input type="time"
-										   x-model="$store.edit.schedule[3].end"
-										   :disabled="!$store.edit.weekmask[3]"/>
-									<input type="checkbox" x-model="$store.edit.weekmask[3]">
-								</div>
-								<div style="display: flex; flex-direction: column; width: fit-content;
-											gap:5px;"
-									 :class="$store.edit.weekmask[4] ? '' : 'disabled'">
-									<span style="text-align:center;">Pe</span>
-									<input type="time"
-										   x-model="$store.edit.schedule[4].start"
-										   :disabled="!$store.edit.weekmask[4]"/>
-									<input type="time"
-										   x-model="$store.edit.schedule[4].end"
-										   :disabled="!$store.edit.weekmask[4]"/>
-									<input type="checkbox" x-model="$store.edit.weekmask[4]">
-								</div>
-								<div style="display: flex; flex-direction: column; width: fit-content;
-											gap:5px;"
-									 :class="$store.edit.weekmask[5] ? '' : 'disabled'">
-									<span style="text-align:center;">La</span>
-									<input type="time"
-										   x-model="$store.edit.schedule[5].start"
-										   :disabled="!$store.edit.weekmask[5]"/>
-									<input type="time"
-										   x-model="$store.edit.schedule[5].end"
-										   :disabled="!$store.edit.weekmask[5]"/>
-									<input type="checkbox" x-model="$store.edit.weekmask[5]">
-								</div>
-								<div style="display: flex; flex-direction: column; width: fit-content;
-											gap:5px;"
-									 :class="$store.edit.weekmask[6] ? '' : 'disabled'">
-									<span style="text-align:center;">Su</span>
-									<input type="time"
-										   x-model="$store.edit.schedule[6].start"
-										   :disabled="!$store.edit.weekmask[6]"/>
-									<input type="time"
-										   x-model="$store.edit.schedule[6].end"
-										   :disabled="!$store.edit.weekmask[6]"/>
-									<input type="checkbox" x-model="$store.edit.weekmask[6]">
-								</div>
+                            <option value="OUT">OUT</option>
+                            <option value="IN">IN</option>
+                        </select><br>
+						<button x-on:click="addTime(-60)">- 1 h </button>
+						<button x-on:click="addTime(-10)">- 10 min </button>
+                        <span x-text="secondsToHuman($store.info.students[$store.edit.student_index].done_seconds)"></span>
+						<button x-on:click="addTime(10)">+ 10 min </button>
+						<button x-on:click="addTime(60)">+ 1 h </button><br>
+						<div style="display: flex; flex-direction: row; gap:10px;" x-data>
+							<div style="display: flex; flex-direction: column; width: fit-content;
+										gap:5px;"
+								 :class="$store.edit.weekmask[0] ? '' : 'disabled'">
+								<span style="text-align:center;">Ma</span>
+								<input type="time"
+									   x-model="$store.edit.schedule[0].start"
+									   :disabled="!$store.edit.weekmask[0]"/>
+								<input type="time"
+									   x-model="$store.edit.schedule[0].end"
+									   :disabled="!$store.edit.weekmask[0]"/>
+								<input type="checkbox" x-model="$store.edit.weekmask[0]">
 							</div>
-                            <button type="submit">Muokkaa</button>
-                        </div>
-                        <div>
-                            <calendar-component id="calendar"></calendar-component>
-                        </div>
-                    </fieldset>
-                </form>
-                </div>
+							<div style="display: flex; flex-direction: column; width: fit-content;
+										gap:5px;"
+								 :class="$store.edit.weekmask[1] ? '' : 'disabled'">
+								<span style="text-align:center;">Ti</span>
+								<input type="time"
+									   x-model="$store.edit.schedule[1].start"
+									   :disabled="!$store.edit.weekmask[1]"/>
+								<input type="time"
+									   x-model="$store.edit.schedule[1].end"
+									   :disabled="!$store.edit.weekmask[1]"/>
+								<input type="checkbox" x-model="$store.edit.weekmask[1]">
+							</div>
+							<div style="display: flex; flex-direction: column; width: fit-content;
+										gap:5px;"
+								 :class="$store.edit.weekmask[2] ? '' : 'disabled'">
+								<span style="text-align:center;">Ke</span>
+								<input type="time"
+									   x-model="$store.edit.schedule[2].start"
+									   :disabled="!$store.edit.weekmask[2]"/>
+								<input type="time"
+									   x-model="$store.edit.schedule[2].end"
+									   :disabled="!$store.edit.weekmask[2]"/>
+								<input type="checkbox" x-model="$store.edit.weekmask[2]">
+							</div>
+							<div style="display: flex; flex-direction: column; width: fit-content;
+										gap:5px;"
+								 :class="$store.edit.weekmask[3] ? '' : 'disabled'">
+								<span style="text-align:center;">To</span>
+								<input type="time"
+									   x-model="$store.edit.schedule[3].start"
+									   :disabled="!$store.edit.weekmask[3]"/>
+								<input type="time"
+									   x-model="$store.edit.schedule[3].end"
+									   :disabled="!$store.edit.weekmask[3]"/>
+								<input type="checkbox" x-model="$store.edit.weekmask[3]">
+							</div>
+							<div style="display: flex; flex-direction: column; width: fit-content;
+										gap:5px;"
+								 :class="$store.edit.weekmask[4] ? '' : 'disabled'">
+								<span style="text-align:center;">Pe</span>
+								<input type="time"
+									   x-model="$store.edit.schedule[4].start"
+									   :disabled="!$store.edit.weekmask[4]"/>
+								<input type="time"
+									   x-model="$store.edit.schedule[4].end"
+									   :disabled="!$store.edit.weekmask[4]"/>
+								<input type="checkbox" x-model="$store.edit.weekmask[4]">
+							</div>
+							<div style="display: flex; flex-direction: column; width: fit-content;
+										gap:5px;"
+								 :class="$store.edit.weekmask[5] ? '' : 'disabled'">
+								<span style="text-align:center;">La</span>
+								<input type="time"
+									   x-model="$store.edit.schedule[5].start"
+									   :disabled="!$store.edit.weekmask[5]"/>
+								<input type="time"
+									   x-model="$store.edit.schedule[5].end"
+									   :disabled="!$store.edit.weekmask[5]"/>
+								<input type="checkbox" x-model="$store.edit.weekmask[5]">
+							</div>
+							<div style="display: flex; flex-direction: column; width: fit-content;
+										gap:5px;"
+								 :class="$store.edit.weekmask[6] ? '' : 'disabled'">
+								<span style="text-align:center;">Su</span>
+								<input type="time"
+									   x-model="$store.edit.schedule[6].start"
+									   :disabled="!$store.edit.weekmask[6]"/>
+								<input type="time"
+									   x-model="$store.edit.schedule[6].end"
+									   :disabled="!$store.edit.weekmask[6]"/>
+								<input type="checkbox" x-model="$store.edit.weekmask[6]">
+							</div>
+						</div>
+                        <button type="submit" x-on:click="editstudent">Muokkaa</button>
+                    </div>
+                    <div>
+                        <calendar-component id="calendar"></calendar-component>
+                    </div>
+                </fieldset>
+            </div>
             <div>
                 <h2>Global calendar</h2>
                 <calendar-component id="gcalendar"></calendar-component>
-                <button id="addholidays">Add holidays</button>
-                <button id="setworkdays">Set workdays</button>
+                <button id="addholidays" x-on:click="addholidays">Add holidays</button>
+                <button id="setworkdays" x-on:click="setworkdays">Set workdays</button>
 				<br>
 				<label for="break">Taukoaikaa (minuutteja)</label><br>
 				<input type="number" name="break"
@@ -252,13 +250,6 @@
 			schedule: null,
 			breaktime: 0
 		});
-
-		socket.on('update_breaks', (data) => {
-			Alpine.store('edit').breaktime = data / 60;
-		});
-		window.updateBreaktime = (e) => {
-			socket.emit("update_breaks", {time : Alpine.store('edit').breaktime * 60 });
-		};
 		
 		socket.on('new_scan', (data) => {
 			const rfid_id = data.rfid_id;
@@ -294,9 +285,16 @@
 			Alpine.store('info').students = data;
 			popup(`Päivitetty oppilaat`);
 		});
+
+		socket.on('update_breaks', (data) => {
+			Alpine.store('edit').breaktime = data / 60;
+		});
+
+		window.updateBreaktime = (e) => {
+			socket.emit("update_breaks", {time : Alpine.store('edit').breaktime * 60 });
+		};
 		
-		const addForm = document.getElementById('add');
-		addForm.addEventListener('submit', (event) => {
+		window.addstudent = (event) => {
 			event.preventDefault();
 			const name = Alpine.store('add').name;
 			const rfid_id = Alpine.store('add').rfid_id;
@@ -326,7 +324,6 @@
 				null
 			];
 		
-
             if (!name) {
                 popup("Nimi vaaditaan");
                 return;
@@ -354,18 +351,14 @@
 		});
 
 		// Global calendar
-		document.getElementById("setworkdays").addEventListener('click', (event) => {
-			event.preventDefault();
+		window.setworkdays = (event) => {
 			const start = jsDateToSQL(document.getElementById("gcalendar").startDate);
 			const end = jsDateToSQL(document.getElementById("gcalendar").endDate);
 			socket.emit("set_workdays", {start : start, end : end});
-			return false;
 		});
-		document.getElementById("addholidays").addEventListener('click', (event) => {
-			event.preventDefault();
+		window.addholidays = (event) => {
 			const holidays = document.getElementById("gcalendar").holidays;
 			socket.emit("add_holidays", {holidays : holidays});
-			return false;
 		});
 		
 		const jsDateToSQL = (jsdate, time) => (`${jsdate.split("-").reverse().map(Calendar.pad).join(".")}`);
@@ -374,30 +367,6 @@
 		const weekArray = (str) => (str.split("").reduce((arr, c) => arr.concat(Boolean(parseInt(c))),[]));
 		const scheduleWeekString = (schedule) => (weekString(schedule.map((x) => x != null)));
 
-		window.editStudent = (index) => {
-			if (Alpine.store('edit').editing &&
-				Alpine.store('edit').student_index != null &&
-				Alpine.store('edit').student_index == index) {
-				Alpine.store('edit').editing = false;
-				return;
-			}
-			const st = Alpine.store('info').students[index];
-			Alpine.store('edit').student_index = index;
-			Alpine.store('edit').editing = true;
-			Alpine.store('edit').schedule = JSON.parse(st.schedule).map((day) => (day == null) ?
-																		{"start" : "08:00", "end" : "16:00"} :
-																		day);
-			// TODO: everything
-			Alpine.store('edit').weekmask = weekArray(scheduleWeekString(JSON.parse(st.schedule)));
-
-			const calendar = document.getElementById("calendar");
-			calendar.year = (new Date()).getFullYear();
-			calendar.month = (new Date()).getMonth() + 1;
-			calendar.startDate = SQLDateToJs(st.start_date);
-			calendar.endDate = SQLDateToJs(st.end_date);
-			calendar.weekmask = scheduleWeekString(JSON.parse(st.schedule));
-			calendar.holidays = JSON.parse(st.excluded_days);
-		}
 		window.deleteStudent = (student) => {
 			socket.emit("delete_student", {id : student.id});
 		}
@@ -433,9 +402,33 @@
 			socket.emit("edit_student", st);
 		}
 
-		const editForm = document.getElementById('edit');
-		editForm.addEventListener('submit', (event) => {
-			event.preventDefault();
+
+		window.editStudent = (index) => {
+			if (Alpine.store('edit').editing &&
+				Alpine.store('edit').student_index != null &&
+				Alpine.store('edit').student_index == index) {
+				Alpine.store('edit').editing = false;
+				return;
+			}
+			const st = Alpine.store('info').students[index];
+			Alpine.store('edit').student_index = index;
+			Alpine.store('edit').editing = true;
+			Alpine.store('edit').schedule = JSON.parse(st.schedule).map((day) => (day == null) ?
+																		{"start" : "08:00", "end" : "16:00"} :
+																		day);
+			// TODO: everything
+			Alpine.store('edit').weekmask = weekArray(scheduleWeekString(JSON.parse(st.schedule)));
+
+			const calendar = document.getElementById("calendar");
+			calendar.year = (new Date()).getFullYear();
+			calendar.month = (new Date()).getMonth() + 1;
+			calendar.startDate = SQLDateToJs(st.start_date);
+			calendar.endDate = SQLDateToJs(st.end_date);
+			calendar.weekmask = scheduleWeekString(JSON.parse(st.schedule));
+			calendar.holidays = JSON.parse(st.excluded_days);
+		}
+		
+		window.editstudent = (event) => {
 			const new_student = Alpine.store('info').students[Alpine.store('edit').student_index];
 			const weekmask = Alpine.store('edit').weekmask;
 			// Turn 0 days into null
@@ -451,7 +444,6 @@
 						  };
 			Object.assign(new_student, dates);
 			socket.emit("edit_student", new_student);
-			return false;
 		});
 		Alpine.start();
 	</script>
