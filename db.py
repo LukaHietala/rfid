@@ -2,7 +2,6 @@ from calendar import week
 import sqlite3
 from datetime import datetime, timedelta, date, time
 from dateutil.relativedelta import relativedelta
-import numpy as np
 import json
 
 from utils import format_datetime, to_datetime, to_time
@@ -362,24 +361,18 @@ def get_student_remaining(student):
     schedule = json.loads(student["schedule"])
     
     # Get all work required except from today
-    work_in_time = timedelta(0)
-    while start < today:
+    work = timedelta(0)
+    while start.date() <= today.date():
         if start > end:
             break
         if schedule[start.weekday()] and not str(start.date()) in excluded_days:
             hours: dict[str, str] = schedule[start.weekday()]
-            work_in_time += (to_time(hours["end"]) - to_time(hours["start"])) - break_per_day 
+            work += (to_time(hours["end"]) - to_time(hours["start"])) - break_per_day 
         start += timedelta(days=1)
-    # Get work amount from today
-    work_in_today = timedelta(0)
-    if start == today:
-        if schedule[start.weekday()] and not str(start.date()) in excluded_days:
-            work_in_today = today - datetime.combine(date.today(), to_time(schedule[start.weekday()]["start"]).time()) - break_per_day
 
     done_time = timedelta(seconds=int(student["done_seconds"]))
             
-    total_work = work_in_today + work_in_time
-    return (total_work - done_time).total_seconds()
-            
+    return (work - done_time).total_seconds()
+
 if __name__ == "__main__":
     init_db()

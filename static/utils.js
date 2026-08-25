@@ -14,10 +14,14 @@ function popup(text) {
     }, 5000);
 }
 
+function formatForIndex(seconds) {
+		return (seconds < 0) ? `Ylitöitä tehty: ${secondsToHuman(seconds)}`
+				: `Töitä jäljellä: ${secondsToHuman(seconds)}`;
+}
+
 function secondsToHuman(seconds) {
 		const hours = Math.floor(Math.abs(seconds) / 3600);
 		const minutes = Math.floor((Math.abs(seconds) % 3600) / 60);
-		return (seconds < 0) ? `Ylitöitä tehty: ${hours} t ${minutes} min`
-				: `Töitä jäljellä: ${hours} t ${minutes} min`;
+		return `${hours} t ${minutes} min`;
 }
 

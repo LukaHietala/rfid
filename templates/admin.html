@@ -101,9 +101,11 @@
                                 <option value="OUT">OUT</option>
                                 <option value="IN">IN</option>
                             </select><br>
-                            <label for="doneseconds">done_seconds</label><br>
-                            <input type="text" id="doneseconds"
-                                x-model="$store.edit.student.done_seconds"><br>
+							<button>- 10 min </button>
+							<button>- 1 h </button>
+                            <span x-model="secondsToHuman($store.edit.student.done_seconds)">
+                            <button>+ 1 h </button>
+                            <button>+ 10 min </button></br>
 							<div style="display: flex; flex-direction: row; gap:10px;" x-data>
 								<div style="display: flex; flex-direction: column; width: fit-content;
 											gap:5px;"
@@ -231,7 +233,7 @@
 			} catch (e) {
 				console.error(e.message);
 			} finally {
-				clearTimeout(studentTimeout);
+				clearTimeout(studentTimer);
 				studentTimer = setTimeout(() => {getStudents()}, 60 * 1000);
 			}
         }
