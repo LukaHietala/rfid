@@ -63,7 +63,7 @@
                     <th>Kalenteri</th>
                     <th>Toiminnot</th>
                 </tr>
-                <template x-for="student in $store.info.students">
+                <template x-for="(student,index) in $store.info.students">
                     <tr>
 						<td x-text="student.name"></td>
                         <td x-text="student.rfid_id"></td>
@@ -75,7 +75,7 @@
 							</button>
 						</td>
                         <td>
-                            <button x-on:click="editStudent(student)">
+                            <button x-on:click="editStudent(index)">
                                 Muokkaa
                             </button>
                             <button x-on:click="deleteStudent(student)">
@@ -90,22 +90,22 @@
             <div x-show="$store.edit.editing">
                 <form id="edit">
                     <fieldset style="border: 1px solid gray; margin: 6px 0; display: flex; flex-direction: row; gap: 12px;">
-                        <legend x-text="`Muokataan: ${$store.edit.student.name}`"></legend>
+                        <legend x-text="`Muokataan: ${$store.info.students[$store.edit.student_index].name}`"></legend>
                         <div>
                             <label for="name">Nimi</label><br>
                             <input type="text" id="name"
-                                x-model="$store.edit.student.name"><br>			
+                                x-model="$store.info.students[$store.edit.student_index].name"><br>			
                             <label for="status">Tila</label><br>
                             <select id="status"
-                                x-model="$store.edit.student.status">
+                                x-model="$store.info.students[$store.edit.student_index].status">
                                 <option value="OUT">OUT</option>
                                 <option value="IN">IN</option>
                             </select><br>
-							<button>- 10 min </button>
-							<button>- 1 h </button>
-                            <span x-model="secondsToHuman($store.edit.student.done_seconds)">
-                            <button>+ 1 h </button>
-                            <button>+ 10 min </button></br>
+							<button x-on:click="addTime(-60)">- 1 h </button>
+							<button x-on:click="addTime(-10)">- 10 min </button>
+                            <span x-text="secondsToHuman($store.info.students[$store.edit.student_index].done_seconds)"></span>
+							<button x-on:click="addTime(10)">+ 10 min </button>
+							<button x-on:click="addTime(60)">+ 1 h </button><br>
 							<div style="display: flex; flex-direction: row; gap:10px;" x-data>
 								<div style="display: flex; flex-direction: column; width: fit-content;
 											gap:5px;"
@@ -246,7 +246,7 @@
 		});
 		
 		Alpine.store('edit', {
-			student: null,
+			student_index: null,
 			editing: false,
 			weekmask: null,
 			schedule: null,
@@ -374,28 +374,29 @@
 		const weekArray = (str) => (str.split("").reduce((arr, c) => arr.concat(Boolean(parseInt(c))),[]));
 		const scheduleWeekString = (schedule) => (weekString(schedule.map((x) => x != null)));
 
-		window.editStudent = (student) => {
+		window.editStudent = (index) => {
 			if (Alpine.store('edit').editing &&
-				Alpine.store('edit').student != null &&
-				Alpine.store('edit').student.id == student.id) {
+				Alpine.store('edit').student_index != null &&
+				Alpine.store('edit').student_index == index) {
 				Alpine.store('edit').editing = false;
 				return;
 			}
-			Alpine.store('edit').student = student;
+			const st = Alpine.store('info').students[index];
+			Alpine.store('edit').student_index = index;
 			Alpine.store('edit').editing = true;
-			Alpine.store('edit').schedule = JSON.parse(student.schedule).map((day) => (day == null) ?
-																			 {"start" : "08:00", "end" : "16:00"} :
-																			 day);
+			Alpine.store('edit').schedule = JSON.parse(st.schedule).map((day) => (day == null) ?
+																		{"start" : "08:00", "end" : "16:00"} :
+																		day);
 			// TODO: everything
-			Alpine.store('edit').weekmask = weekArray(scheduleWeekString(JSON.parse(student.schedule)));
+			Alpine.store('edit').weekmask = weekArray(scheduleWeekString(JSON.parse(st.schedule)));
 
 			const calendar = document.getElementById("calendar");
 			calendar.year = (new Date()).getFullYear();
 			calendar.month = (new Date()).getMonth() + 1;
-			calendar.startDate = SQLDateToJs(student.start_date);
-			calendar.endDate = SQLDateToJs(student.end_date);
-			calendar.weekmask = scheduleWeekString(JSON.parse(student.schedule));
-			calendar.holidays = JSON.parse(student.excluded_days);
+			calendar.startDate = SQLDateToJs(st.start_date);
+			calendar.endDate = SQLDateToJs(st.end_date);
+			calendar.weekmask = scheduleWeekString(JSON.parse(st.schedule));
+			calendar.holidays = JSON.parse(st.excluded_days);
 		}
 		window.deleteStudent = (student) => {
 			socket.emit("delete_student", {id : student.id});
@@ -425,10 +426,17 @@
             calendar.style.left = `${event.clientX - (calendar.offsetWidth / 2)}px`
         }
 
+		window.addTime = (minutes) => {
+            const index = Alpine.store('edit').student_index
+			Alpine.store('info').students[index].done_seconds += (minutes*60);
+			const st = Alpine.store('info').students[index];
+			socket.emit("edit_student", st);
+		}
+
 		const editForm = document.getElementById('edit');
 		editForm.addEventListener('submit', (event) => {
 			event.preventDefault();
-			const new_student = Alpine.store('edit').student;
+			const new_student = Alpine.store('info').students[Alpine.store('edit').student_index];
 			const weekmask = Alpine.store('edit').weekmask;
 			// Turn 0 days into null
 			const schedule = Alpine.store('edit').schedule.map((day, i) => (weekmask[i]) ? day : null);
