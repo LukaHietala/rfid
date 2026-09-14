@@ -32,7 +32,7 @@
             .students-table th, td {
                 padding: 8px 12px;
             }
-			
+
 			.disabled {
 				opacity: 50%;
 			}
@@ -64,15 +64,24 @@
                     <th>Toiminnot</th>
                 </tr>
                 <template x-for="(student,index) in $store.info.students">
-                    <tr>
+                    <tr x-data="{ showCalendar : false }">
 						<td x-text="student.name"></td>
                         <td x-text="student.rfid_id"></td>
                         <td x-text="student.status"></td>
                         <td x-text="secondsToHuman(student.done_seconds)"></td>
                         <td>
-							<button x-on:click="openCalendar($event, student)">
-								Avaa
+							<button x-on:click="showCalendar = !showCalendar">
+								Toggle
 							</button>
+							<div x-show="showCalendar">
+								<calendar-component editable="false"
+													:holidays="student.excluded_days"
+													:weekmask="weekArray(scheduleWeekString(JSON.parse(student.schedule)))"
+													:start_date="SQLDateToJs(student.start_date)"
+													:end_date="SQLDateToJs(student.end_date)"
+													x-on:click.outside="removePopup">
+								</calendar-component>
+							</div>
 						</td>
                         <td>
                             <button x-on:click="editStudent(index)">
@@ -84,16 +93,15 @@
                         </td>
                     </tr>
                 </template>
-				<calendar-component id="popup_calendar"
-				x-on:click.outside="removePopup" style="display:none;"></calendar-component>
             </table>
+			<!-- EDITING -->
             <div x-show="$store.edit.editing">
                 <fieldset style="border: 1px solid gray; margin: 6px 0; display: flex; flex-direction: row; gap: 12px;">
                     <legend x-text="`Muokataan: ${$store.info.students[$store.edit.student_index].name}`"></legend>
                     <div>
                         <label for="name">Nimi</label><br>
                         <input type="text" id="name"
-                               x-model="$store.info.students[$store.edit.student_index].name"><br>			
+                               x-model="$store.info.students[$store.edit.student_index].name"><br>
                         <label for="status">Tila</label><br>
                         <select id="status"
                                 x-model="$store.info.students[$store.edit.student_index].status">
@@ -108,7 +116,7 @@
 						<div style="display: flex; flex-direction: row; gap:10px;" x-data>
 							<div style="display: flex; flex-direction: column; width: fit-content;
 										gap:5px;"
-								 :class="$store.edit.weekmask[0] ? '' : 'disabled'">
+ 								 :class="$store.edit.weekmask[0] ? '' : 'disabled'">
 								<span style="text-align:center;">Ma</span>
 								<input type="time"
 									   x-model="$store.edit.schedule[0].start"
@@ -194,7 +202,12 @@
                         <button type="submit" x-on:click="editstudent">Muokkaa</button>
                     </div>
                     <div>
-                        <calendar-component id="calendar"></calendar-component>
+                        <calendar-component id="calendar"
+											:holidays="$store.info.students[$store.edit.student_index].excluded_days"
+											:weekmask="$store.edit.weekmask"
+											:start_date="SQLDateToJs($store.info.students[$store.edit.student_index].start_date)"
+											:end_date="SQLDateToJs($store.info.students[$store.edit.student_index].end_date)"
+							></calendar-component>
                     </div>
                 </fieldset>
             </div>
@@ -214,9 +227,22 @@
 	<script type="module">
 		import { io } from "https://cdn.socket.io/4.8.3/socket.io.esm.min.js";
 		import Alpine from "/static/alpine.js";
-		
+
 		const socket = io();
 		window.Alpine = Alpine;
+
+		Alpine.store('add', {
+			rfid_id: "",
+			name: ""
+		});
+
+		Alpine.store('edit', {
+			student_index: null,
+			editing: false,
+			weekmask: null,
+			schedule: null,
+			breaktime: 0
+		});
 
 		let studentTimer;
         async function getStudents() {
@@ -238,23 +264,16 @@
         await getStudents();
 		socket.emit("get_breaks");
 
-		Alpine.store('add', {
-			rfid_id: "",
-			name: ""
-		});
-		
-		Alpine.store('edit', {
-			student_index: null,
-			editing: false,
-			weekmask: null,
-			schedule: null,
-			breaktime: 0
-		});
-		
+		window.jsDateToSQL = (jsdate, time) => (`${jsdate.split("-").reverse().map(Calendar.pad).join(".")}`);
+		window.SQLDateToJs = (sqldate) => (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().map(Calendar.pad).join("-");
+		window.weekString = (arr) => (arr.reduce((str, x) => str + Number(x).toString(),""));
+		window.weekArray = (str) => (str.split("").reduce((arr, c) => arr.concat(Boolean(parseInt(c))),[]));
+		window.scheduleWeekString = (schedule) => (weekString(schedule.map((x) => x != null)));
+
 		socket.on('new_scan', (data) => {
 			const rfid_id = data.rfid_id;
 			const in_database = data.found;
-			if (in_database) {				
+			if (in_database) {
 				const name = data.name;
 				popup(`${rfid_id} on jo tietokannassa nimellä ${name}`);
 				Alpine.store('info').students.find((student) => student.id == id).status = status;
@@ -293,12 +312,12 @@
 		window.updateBreaktime = (e) => {
 			socket.emit("update_breaks", {time : Alpine.store('edit').breaktime * 60 });
 		};
-		
+
 		window.addstudent = (event) => {
 			event.preventDefault();
 			const name = Alpine.store('add').name;
 			const rfid_id = Alpine.store('add').rfid_id;
-			const calendar = document.getElementById("add_calendar");			
+			const calendar = document.getElementById("add_calendar");
 			const schedule = [
 				{
 					"start": "09:00",
@@ -323,7 +342,7 @@
 				null,
 				null
 			];
-		
+
             if (!name) {
                 popup("Nimi vaaditaan");
                 return;
@@ -348,24 +367,18 @@
 			Alpine.store('add').name = "";
 			Alpine.store('add').rfid_id = "";
 			return false;
-		});
+		};
 
 		// Global calendar
 		window.setworkdays = (event) => {
 			const start = jsDateToSQL(document.getElementById("gcalendar").startDate);
 			const end = jsDateToSQL(document.getElementById("gcalendar").endDate);
 			socket.emit("set_workdays", {start : start, end : end});
-		});
+		};
 		window.addholidays = (event) => {
 			const holidays = document.getElementById("gcalendar").holidays;
 			socket.emit("add_holidays", {holidays : holidays});
-		});
-		
-		const jsDateToSQL = (jsdate, time) => (`${jsdate.split("-").reverse().map(Calendar.pad).join(".")}`);
-		const SQLDateToJs = (sqldate) => (sqldate.split(" ")[0]).split(" ")[0].split(".").reverse().map(Calendar.pad).join("-");
-		const weekString = (arr) => (arr.reduce((str, x) => str + Number(x).toString(),""));
-		const weekArray = (str) => (str.split("").reduce((arr, c) => arr.concat(Boolean(parseInt(c))),[]));
-		const scheduleWeekString = (schedule) => (weekString(schedule.map((x) => x != null)));
+		};
 
 		window.deleteStudent = (student) => {
 			socket.emit("delete_student", {id : student.id});
@@ -380,20 +393,12 @@
 				popupInitialized = true;
 			}
 		});
-		
-        window.openCalendar = (event, student) => {
-            const calendar = document.getElementById("popup_calendar");
-			calendar.style.display = "";
-			calendar.editable = false;
-			calendar.holidays = student.excluded_days;
-			calendar.startDate = SQLDateToJs(student.start_date);
-			calendar.endDate = SQLDateToJs(student.end_date);
-			calendar.weekmask = scheduleWeekString(JSON.parse(student.schedule));
-			document.body.append(calendar);
-            calendar.style.position = "absolute"
-            calendar.style.top = `${event.clientY + 20}px`
-            calendar.style.left = `${event.clientX - (calendar.offsetWidth / 2)}px`
-        }
+
+        // window.positionCalendar = (event, student) => {
+        //     calendar.style.position = "absolute"
+        //     calendar.style.top = `${event.clientY + 20}px`
+        //     calendar.style.left = `${event.clientX - (calendar.offsetWidth / 2)}px`
+        // }
 
 		window.addTime = (minutes) => {
             const index = Alpine.store('edit').student_index
@@ -401,7 +406,6 @@
 			const st = Alpine.store('info').students[index];
 			socket.emit("edit_student", st);
 		}
-
 
 		window.editStudent = (index) => {
 			if (Alpine.store('edit').editing &&
@@ -416,18 +420,9 @@
 			Alpine.store('edit').schedule = JSON.parse(st.schedule).map((day) => (day == null) ?
 																		{"start" : "08:00", "end" : "16:00"} :
 																		day);
-			// TODO: everything
 			Alpine.store('edit').weekmask = weekArray(scheduleWeekString(JSON.parse(st.schedule)));
-
-			const calendar = document.getElementById("calendar");
-			calendar.year = (new Date()).getFullYear();
-			calendar.month = (new Date()).getMonth() + 1;
-			calendar.startDate = SQLDateToJs(st.start_date);
-			calendar.endDate = SQLDateToJs(st.end_date);
-			calendar.weekmask = scheduleWeekString(JSON.parse(st.schedule));
-			calendar.holidays = JSON.parse(st.excluded_days);
 		}
-		
+
 		window.editstudent = (event) => {
 			const new_student = Alpine.store('info').students[Alpine.store('edit').student_index];
 			const weekmask = Alpine.store('edit').weekmask;
@@ -437,14 +432,13 @@
 				popup("Päivä ei voi alkaa sen jälkeen kuin se on loppunut");
 				return false;
 			}
-			const dates = { start_date : jsDateToSQL(document.getElementById("calendar").startDate),
-							end_date : jsDateToSQL(document.getElementById("calendar").endDate),
+			const dates = { start_date : jsDateToSQL(document.getElementById("calendar").start_date),
+							end_date : jsDateToSQL(document.getElementById("calendar").end_date),
 							excluded_days : JSON.stringify(document.getElementById("calendar").holidays),
-							schedule : JSON.stringify(schedule)
-						  };
+							schedule : JSON.stringify(schedule) };
 			Object.assign(new_student, dates);
 			socket.emit("edit_student", new_student);
-		});
+		};
 		Alpine.start();
 	</script>
 </html>
