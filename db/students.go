@@ -1,0 +1,74 @@
+package db
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+)
+
+func (s *Store) AddStudent(ctx context.Context, student *Student) error {
+	query := `
+        INSERT INTO students (uid, name, start_date, end_date, schedule, excluded_days, break_time)
+        VALUES (?,?,?,?,?,?,?)
+    `
+	res, err := s.db.ExecContext(
+		ctx, query,
+		student.UID, student.Name, student.StartDate, student.EndDate,
+		student.Schedule, student.ExcludedDays, student.BreakTime,
+	)
+	if err != nil {
+		return err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	student.ID = int(id)
+	return nil
+}
+
+func (s *Store) ListStudents(ctx context.Context) ([]*Student, error) {
+	query := `SELECT id, uid, name, status, start_date, end_date, schedule, done_seconds, excluded_days, break_time, created_at FROM students`
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	students := make([]*Student, 0)
+	for rows.Next() {
+		st := &Student{}
+		err := rows.Scan(
+			&st.ID, &st.UID, &st.Name, &st.Status, &st.StartDate,
+			&st.EndDate, &st.Schedule, &st.DoneSeconds,
+			&st.ExcludedDays, &st.BreakTime, &st.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		students = append(students, st)
+	}
+
+	return students, rows.Err()
+}
+
+func (s *Store) FindStudentByID(ctx context.Context, id int) (*Student, error) {
+	query := `SELECT id, uid, name, status, start_date, end_date, schedule, done_seconds, excluded_days, break_time, created_at FROM students WHERE id = ? LIMIT 1`
+
+	var st Student
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&st.ID, &st.UID, &st.Name, &st.Status, &st.StartDate,
+		&st.EndDate, &st.Schedule, &st.DoneSeconds,
+		&st.ExcludedDays, &st.BreakTime, &st.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("no student found based on id: %d", id)
+		}
+		return nil, err
+	}
+
+	return &st, nil
+}
