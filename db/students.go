@@ -8,12 +8,12 @@ import (
 
 func (s *Store) AddStudent(ctx context.Context, student *Student) error {
 	query := `
-        INSERT INTO students (uid, name, start_date, end_date, schedule, excluded_days, break_time)
-        VALUES (?,?,?,?,?,?,?)
+        INSERT INTO students (uid, status, name, start_date, end_date, schedule, excluded_days, break_time)
+        VALUES (?,?,?,?,?,?,?,?)
     `
 	res, err := s.db.ExecContext(
 		ctx, query,
-		student.UID, student.Name, student.StartDate, student.EndDate,
+		student.UID, student.Status, student.Name, student.StartDate, student.EndDate,
 		student.Schedule, student.ExcludedDays, student.BreakTime,
 	)
 	if err != nil {
@@ -71,4 +71,14 @@ func (s *Store) FindStudentByID(ctx context.Context, id int) (*Student, error) {
 	}
 
 	return &st, nil
+}
+
+func (s *Store) IncrementDoneSeconds(ctx context.Context, seconds int) error {
+	query := `
+		UPDATE students 
+		SET done_seconds = done_seconds + ? 
+		WHERE status = 'IN'
+	`
+	_, err := s.db.ExecContext(ctx, query, seconds)
+	return err
 }
