@@ -44,7 +44,6 @@
             <p id="popup" class="popup"></p>
             <fieldset style="border: 1px solid gray; margin: 6px 0;"
 					  x-data="{ calendar_open: false }">
-
                 <legend>Lisää oppilas</legend>
                 <label for="name">Nimi</label>
                 <input type="text" name="name" x-model="$store.add.name" required>
@@ -54,6 +53,7 @@
                 <button type="submit" x-on:click="addstudent">Luo</button>
 				<calendar-component id="add_calendar" x-show="calendar_open"></calendar-component>
             </fieldset>
+			<!-- STUDENTS -->
             <table id="table" class="students-table">
                 <tr>
                     <th>Nimi</th>
@@ -79,7 +79,7 @@
 													:weekmask="weekArray(scheduleWeekString(JSON.parse(student.schedule)))"
 													:start_date="SQLDateToJs(student.start_date)"
 													:end_date="SQLDateToJs(student.end_date)"
-													x-on:click.outside="removePopup">
+													x-on:click.outside="showCalendar = false">
 								</calendar-component>
 							</div>
 						</td>
@@ -95,7 +95,7 @@
                 </template>
             </table>
 			<!-- EDITING -->
-            <div x-show="$store.edit.editing">
+            <template x-if="$store.edit.editing">
                 <fieldset style="border: 1px solid gray; margin: 6px 0; display: flex; flex-direction: row; gap: 12px;">
                     <legend x-text="`Muokataan: ${$store.info.students[$store.edit.student_index].name}`"></legend>
                     <div>
@@ -202,20 +202,21 @@
                         <button type="submit" x-on:click="editstudent">Muokkaa</button>
                     </div>
                     <div>
-                        <calendar-component id="calendar"
-											:holidays="$store.info.students[$store.edit.student_index].excluded_days"
-											:weekmask="$store.edit.weekmask"
-											:start_date="SQLDateToJs($store.info.students[$store.edit.student_index].start_date)"
-											:end_date="SQLDateToJs($store.info.students[$store.edit.student_index].end_date)"
+                        <calendar-component
+							id="calendar"
+							:holidays="$store.info.students[$store.edit.student_index].excluded_days"
+							:weekmask="$store.edit.weekmask"
+							:start_date="SQLDateToJs($store.info.students[$store.edit.student_index].start_date)"
+							:end_date="SQLDateToJs($store.info.students[$store.edit.student_index].end_date)"
 							></calendar-component>
                     </div>
                 </fieldset>
-            </div>
+            </template>
             <div>
-                <h2>Global calendar</h2>
+                <h2>Muokkaa kaikkia oppilaita</h2>
                 <calendar-component id="gcalendar"></calendar-component>
-                <button id="addholidays" x-on:click="addholidays">Add holidays</button>
-                <button id="setworkdays" x-on:click="setworkdays">Set workdays</button>
+                <button id="addholidays" x-on:click="addholidays">Lisää vapaapäiviä</button>
+                <button id="setworkdays" x-on:click="setworkdays">Aseta kaikille työjakso</button>
 				<br>
 				<label for="break">Taukoaikaa (minuutteja)</label><br>
 				<input type="number" name="break"
@@ -242,6 +243,10 @@
 			weekmask: null,
 			schedule: null,
 			breaktime: 0
+		});
+
+		Alpine.store('info', {
+			students: []
 		});
 
 		let studentTimer;
@@ -318,31 +323,12 @@
 			const name = Alpine.store('add').name;
 			const rfid_id = Alpine.store('add').rfid_id;
 			const calendar = document.getElementById("add_calendar");
-			const schedule = [
-				{
-					"start": "09:00",
-					"end": "14:45"
-				},
-				{
-					"start": "08:00",
-					"end": "14:45"
-				},
-				{
-					"start": "08:00",
-					"end": "14:45"
-				},
-				{
-					"start": "08:00",
-					"end": "14:45"
-				},
-				{
-					"start": "08:00",
-					"end": "14:45"
-				},
-				null,
-				null
-			];
-
+			const schedule = [{"start": "09:00","end": "14:45"},
+							  {"start": "08:00","end": "14:45"},
+							  {"start": "08:00","end": "14:45"},
+							  {"start": "08:00","end": "14:45"},
+							  {"start": "08:00","end": "14:45"},
+							  null,null];
             if (!name) {
                 popup("Nimi vaaditaan");
                 return;
@@ -375,6 +361,7 @@
 			const end = jsDateToSQL(document.getElementById("gcalendar").endDate);
 			socket.emit("set_workdays", {start : start, end : end});
 		};
+
 		window.addholidays = (event) => {
 			const holidays = document.getElementById("gcalendar").holidays;
 			socket.emit("add_holidays", {holidays : holidays});
@@ -383,22 +370,6 @@
 		window.deleteStudent = (student) => {
 			socket.emit("delete_student", {id : student.id});
 		}
-
-		let popupInitialized = false;
-		window.removePopup = (() => {
-			if (popupInitialized) {
-				document.getElementById("popup_calendar").style.display = "none";
-				popupInitialized = false;
-			} else {
-				popupInitialized = true;
-			}
-		});
-
-        // window.positionCalendar = (event, student) => {
-        //     calendar.style.position = "absolute"
-        //     calendar.style.top = `${event.clientY + 20}px`
-        //     calendar.style.left = `${event.clientX - (calendar.offsetWidth / 2)}px`
-        // }
 
 		window.addTime = (minutes) => {
             const index = Alpine.store('edit').student_index
@@ -414,13 +385,13 @@
 				Alpine.store('edit').editing = false;
 				return;
 			}
-			const st = Alpine.store('info').students[index];
+			const sc = JSON.parse(Alpine.store('info').students[index].schedule);
 			Alpine.store('edit').student_index = index;
 			Alpine.store('edit').editing = true;
-			Alpine.store('edit').schedule = JSON.parse(st.schedule).map((day) => (day == null) ?
-																		{"start" : "08:00", "end" : "16:00"} :
-																		day);
-			Alpine.store('edit').weekmask = weekArray(scheduleWeekString(JSON.parse(st.schedule)));
+			Alpine.store('edit').schedule = sc.map((day) => (day == null) ?
+												   {"start":"08:00","end":"16:00"} :
+												   day);
+			Alpine.store('edit').weekmask = weekArray(scheduleWeekString(sc));
 		}
 
 		window.editstudent = (event) => {

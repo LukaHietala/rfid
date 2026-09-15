@@ -1,33 +1,33 @@
 /*
-* BSD 3-Clause License
-* 
-* Copyright (c) 2026, Wisdurm
-* 
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions are met:
-* 
-* 1. Redistributions of source code must retain the above copyright notice, this
-*    list of conditions and the following disclaimer.
-* 
-* 2. Redistributions in binary form must reproduce the above copyright notice,
-*    this list of conditions and the following disclaimer in the documentation
-*    and/or other materials provided with the distribution.
-* 
-* 3. Neither the name of the copyright holder nor the names of its
-*    contributors may be used to endorse or promote products derived from
-*    this software without specific prior written permission.
-* 
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2026, Wisdurm
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 class Calendar extends HTMLElement {
 		// Squares, internal use
@@ -45,7 +45,7 @@ class Calendar extends HTMLElement {
 		set year(x) {
 				this.#year = x;
 				this.#reindeer();
-		}	
+		}
 		// Month
 		#month = (new Date()).getMonth() + 1;
 		get month() {
@@ -56,7 +56,7 @@ class Calendar extends HTMLElement {
 				this.#reindeer();
 		}
 
-		#weekmask = "1111100";
+		#weekmask = [true,true,true,true,true,false,false];
 		get weekmask() {
 				return this.#weekmask;
 		}
@@ -73,22 +73,22 @@ class Calendar extends HTMLElement {
 				this.#holidays = x;
 				this.#reindeer();
 		}
-		
-		#startDate = null;
-		get startDate() {
-				return this.#startDate
+
+		#start_date = null;
+		get start_date() {
+				return this.#start_date
 		}
-		set startDate(x) {
-				this.#startDate = x;
+		set start_date(x) {
+				this.#start_date = x;
 				this.#reindeer();
 		}
-		
-		#endDate = null;
-		get endDate() {
-				return this.#endDate
+
+		#end_date = null;
+		get end_date() {
+				return this.#end_date
 		}
-		set endDate(x) {
-				this.#endDate = x;
+		set end_date(x) {
+				this.#end_date = x;
 				this.#reindeer();
 		}
 
@@ -99,17 +99,15 @@ class Calendar extends HTMLElement {
 				return new Date(year, month, 0).getDate();
 		}
 
-		static dateValue(date) {
-				let year, month, day;
-				[year, month, day] = date.split("-").map((x) => parseInt(x));
-				return (year*365) + (month*30) + day;
-		}
-
 		static pad(str) {
 				return str.toString().length == 1 ? `0${str}` : str;
 		}
-		
+
 		#reindeer() {
+				// If not initialized yet, dont update
+				if (!this.#title)
+						return;
+
 				const startDay = (new Date(this.#year, this.#month - 1, 0)).getDay();
 				const days = Calendar.daysInMonth(this.#year, this.#month);
 				this.#title.textContent = `Kalenteri (${Calendar.pad(this.#month)}.${this.#year})`;
@@ -124,7 +122,7 @@ class Calendar extends HTMLElement {
 								this.#lastRow.setAttribute("hidden", null);
 						}
 				}
-				
+
 				this.#squares.forEach((div) => {
 						// Day amount
 						const id = parseInt(div.id);
@@ -139,12 +137,12 @@ class Calendar extends HTMLElement {
 						// Is holiday
 						const date = `${this.#year}-${Calendar.pad(this.#month)}-${Calendar.pad(day)}`;
 						const weekday = (new Date(this.#year, this.#month - 1, day-1)).getDay();
-						if (date == this.#startDate || date == this.#endDate) {
+						if (date == this.#start_date || date == this.#end_date) {
 								div.setAttribute("bgcolor", "#ffff00");
-						} else if (this.#holidays.includes(date) || this.#weekmask[weekday] == '0') {
+						} else if (this.#holidays.includes(date) || !this.#weekmask[weekday]) {
 								div.setAttribute("bgcolor", "#ff0000");
-						} else if (this.#startDate != null && this.#endDate != null &&
-											 Calendar.dateValue(date) > Calendar.dateValue(this.#startDate) && Calendar.dateValue(date) < Calendar.dateValue(this.#endDate)) {
+						} else if (this.#start_date != null && this.#end_date != null &&
+											 date > this.#start_date && date < this.#end_date) {
 								div.setAttribute("bgcolor", "#bbbbbb");
 						} else {
 								div.setAttribute("bgcolor", "#ffffff");
@@ -152,10 +150,16 @@ class Calendar extends HTMLElement {
 				});
 		}
 
-		constructor() {
-				super();
-				const shadowRoot = this.attachShadow({mode: 'open'});
+		connectedCallback() {
 				let _self = this;
+
+				if(this.hasAttribute('year')) this.#year = this.getAttribute('year');
+				if(this.hasAttribute('month')) this.#month = this.getAttribute('month');
+				if(this.hasAttribute('weekmask')) this.#weekmask = JSON.parse(this.getAttribute('weekmask'));
+				if(this.hasAttribute('holidays')) this.#holidays = JSON.parse(this.getAttribute('holidays'));
+				if(this.hasAttribute('start_date')) this.#start_date = this.getAttribute('start_date');
+				if(this.hasAttribute('end_date')) this.#end_date = this.getAttribute('end_date');
+				if(this.hasAttribute('editable')) this.editable = JSON.parse(this.getAttribute('editable'));
 
 				const cont = document.createElement("table");
 				cont.setAttribute("bgcolor", "#000000");
@@ -163,7 +167,7 @@ class Calendar extends HTMLElement {
 				const t = document.createElement("font");
 				t.textContent = `Kalenteri (${Calendar.pad(this.#month)}.${this.#year})`;
 				t.setAttribute("color", "#ffffff");
-				this.#title = t
+				this.#title = t;
 				cont.appendChild(t);
 
 				const b1 = document.createElement("font");
@@ -178,7 +182,7 @@ class Calendar extends HTMLElement {
 						_self.#reindeer();
 				});
 				cont.appendChild(b1);
-				
+
 				const b2 = document.createElement("font");
 				b2.setAttribute("color", "#ffffff");
 				b2.textContent = "  ->";
@@ -191,7 +195,7 @@ class Calendar extends HTMLElement {
 						_self.#reindeer();
 				});
 				cont.appendChild(b2);
-				
+
 				const table = document.createElement("table");
 				table.setAttribute("bgcolor", "#ffffff");
 				table.setAttribute("bordercolordark", "#000000");
@@ -232,13 +236,18 @@ class Calendar extends HTMLElement {
 																b.setAttribute("bgcolor", "#ff0000");
 														}
 												} else {
-														if (!_self.#startDate) {
-																_self.#startDate = date;
-														} else if (!_self.#endDate) {
-																_self.#endDate = date;
+														if (!_self.#start_date) {
+																_self.#start_date = date;
+														} else if (!_self.#end_date) {
+																if (date < _self.start_date) {
+																		_self.#end_date = _self.#start_date;
+																		_self.#start_date = date;
+																} else {
+																		_self.#end_date = date;
+																}
 														} else {
-																_self.#startDate = date;
-																_self.#endDate = null;
+																_self.#start_date = date;
+																_self.#end_date = null;
 														}
 														_self.#reindeer();
 												}
@@ -254,10 +263,23 @@ class Calendar extends HTMLElement {
 				}
 				cont.appendChild(table);
 
-				shadowRoot.appendChild(cont);
+				this.appendChild(cont);
 				this.#reindeer();
 		}
+
+		static get observedAttributes() { return ['year', 'month', 'weekmask',
+																							'holidays', 'start_date',
+																							'end_date', 'editable']; }
+
+		attributeChangedCallback(name, oldValue, newValue) {
+				try {
+						this[name] = JSON.parse(newValue);
+				} catch (_) {
+						this[name] = newValue;
+				}
+				this.#reindeer();
+		}
+
 }
 
 customElements.define('calendar-component', Calendar);
-
