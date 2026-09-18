@@ -1,7 +1,6 @@
-package main
+package api
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -12,54 +11,24 @@ import (
 	"github.com/lukahietala/rfid/websockets"
 )
 
-func NewRouter(store *db.Store, hub *websockets.Hub) *chi.Mux {
+var store *db.Store
+var hub *websockets.Hub
+
+func NewRouter(s *db.Store, h *websockets.Hub) *chi.Mux {
+	// Asiatonta
+	store = s
+	hub = h
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
 	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		websockets.ServeWs(hub, w, r)
 	})
 
 	r.Route("/api", func(r chi.Router) {
-		r.Get("/students", func(w http.ResponseWriter, r *http.Request) {
-			students, err := store.ListStudents(r.Context())
-			if err != nil {
-				render.Render(w, r, ErrInternal(err))
-				return
-			}
-			render.JSON(w, r, students)
-		})
-
-		r.Post("/students", func(w http.ResponseWriter, r *http.Request) {
-			var s db.Student
-			if err := render.Decode(r, &s); err != nil {
-				render.Render(w, r, ErrInvalidRequest("invalid json payload"))
-				return
-			}
-
-			if s.Status == "" {
-				s.Status = "OUT"
-			}
-
-			if err := store.AddStudent(r.Context(), &s); err != nil {
-				render.Render(w, r, ErrInternal(err))
-				return
-			}
-
-			bytes, err := json.Marshal(s)
-			if err != nil {
-				render.Render(w, r, ErrInternal(err))
-				return
-			}
-
-			hub.Broadcast(websockets.Event{
-				Event:   "student:new",
-				Payload: bytes,
-			})
-
-			render.Status(r, http.StatusCreated)
-			render.JSON(w, r, s)
-		})
+		r.Mount("/students", studentsResource{}.Routes())
 	})
 
 	return r
@@ -87,5 +56,12 @@ func ErrInternal(err error) render.Renderer {
 	return &ErrResponse{
 		HTTPStatusCode: http.StatusInternalServerError,
 		ErrorText:      http.StatusText(http.StatusInternalServerError),
+	}
+}
+
+func ErrNotFound() render.Renderer {
+	return &ErrResponse{
+		HTTPStatusCode: http.StatusNotFound,
+		ErrorText:      http.StatusText(http.StatusNotFound),
 	}
 }

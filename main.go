@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/lukahietala/rfid/api"
 	"github.com/lukahietala/rfid/db"
 	"github.com/lukahietala/rfid/websockets"
 )
@@ -27,7 +28,7 @@ func main() {
 	defer cancel()
 	go accumulateDoneTicker(ctx, store, hub)
 
-	r := NewRouter(store, hub)
+	r := api.NewRouter(store, hub)
 
 	log.Println("Server running on :3000")
 	http.ListenAndServe(":3000", r)
