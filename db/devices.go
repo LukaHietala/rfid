@@ -33,7 +33,7 @@ func (s *Store) ListDevices(ctx context.Context) ([]*Device, error) {
 	query := `
 		SELECT id, name, secret_key
 		FROM devices
-		`
+	`
 
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {

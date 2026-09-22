@@ -5,9 +5,9 @@ import (
 )
 
 func (s *Store) NewScan(ctx context.Context, scan *Scan) error {
-	query := `INSERT INTO scans (uid, student_id) VALUES (?,?)`
+	query := `INSERT INTO scans (uid, timestamp, student_id) VALUES (?,?,?)`
 
-	res, err := s.db.ExecContext(ctx, query, scan.UID, scan.StudentID)
+	res, err := s.db.ExecContext(ctx, query, scan.UID, scan.Timestamp, scan.StudentID)
 	if err != nil {
 		return err
 	}

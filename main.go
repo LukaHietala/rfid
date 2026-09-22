@@ -104,7 +104,7 @@ func handleReadConn(conn net.Conn, store *db.Store, hub *websockets.Hub) {
 
 		uidLen := header[1]
 		if uidLen != 4 && uidLen != 7 {
-			log.Printf("invalid payload lenght of %d. Expected 4 or 7", uidLen)
+			log.Printf("invalid payload length of %d. Expected 4 or 7", uidLen)
 			break
 		}
 
@@ -147,20 +147,46 @@ func handleReadConn(conn net.Conn, store *db.Store, hub *websockets.Hub) {
 
 		expectedHash := mac.Sum(nil)
 		if !hmac.Equal(expectedHash, devHash) {
-			log.Println("invalid hash")
+			log.Println("invalid hash, check secret key and reader id")
 			break
 		}
 
 		uidStr := hex.EncodeToString(uid)
 
-		studentCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		studentGetCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		student, err := store.FindStudentByUID(studentCtx, uidStr)
+		student, err := store.FindStudentByUID(studentGetCtx, uidStr)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
+
+		studentUpdateCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		if student.Status == "IN" {
+			student.Status = "OUT"
+		} else {
+			student.Status = "IN"
+		}
+
+		err = store.UpdateStudent(studentUpdateCtx, student.ID, *student)
+		if err != nil {
+			log.Println("failed to update student:", err)
+			continue
+		}
+
+		studentBytes, err := json.Marshal(student)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		hub.Broadcast(websockets.Event{
+			Event:   "student:update",
+			Payload: studentBytes,
+		})
 
 		scanCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -168,6 +194,7 @@ func handleReadConn(conn net.Conn, store *db.Store, hub *websockets.Hub) {
 		scan := &db.Scan{
 			UID:       uidStr,
 			StudentID: student.ID,
+			Timestamp: time.Unix(timestamp, 0).Format(time.DateTime),
 		}
 		err = store.NewScan(scanCtx, scan)
 		if err != nil {
@@ -175,7 +202,7 @@ func handleReadConn(conn net.Conn, store *db.Store, hub *websockets.Hub) {
 			continue
 		}
 
-		bytes, err := json.Marshal(scan)
+		scanBytes, err := json.Marshal(scan)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -183,7 +210,7 @@ func handleReadConn(conn net.Conn, store *db.Store, hub *websockets.Hub) {
 
 		hub.Broadcast(websockets.Event{
 			Event:   "scan:new",
-			Payload: bytes,
+			Payload: scanBytes,
 		})
 
 	}

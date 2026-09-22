@@ -84,9 +84,9 @@ type Student struct {
 }
 
 type Device struct {
-	ID        int
-	Name      string
-	SecretKey string
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	SecretKey string `json:"secret_key"`
 }
 
 type Scan struct {

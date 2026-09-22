@@ -24,7 +24,7 @@ var schema = `
     CREATE TABLE IF NOT EXISTS scans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uid TEXT NOT NULL,
-        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, 
+        timestamp TEXT NOT NULL, 
         student_id INTEGER NOT NULL
     );
 
