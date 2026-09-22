@@ -83,6 +83,12 @@ type Student struct {
 	CreatedAt    string          `json:"created_at"`
 }
 
+type Device struct {
+	ID        int
+	Name      string
+	SecretKey string
+}
+
 type Scan struct {
 	ID        int    `json:"id"`
 	UID       string `json:"uid"` // card uid

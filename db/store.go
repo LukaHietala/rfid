@@ -27,6 +27,12 @@ var schema = `
         timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, 
         student_id INTEGER NOT NULL
     );
+
+	CREATE TABLE IF NOT EXISTS devices (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		secret_key TEXT NOT NULL
+	);
 `
 
 // TODO: foreing keys
