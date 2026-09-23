@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+	"slices"
+	"time"
 )
 
 func (s *Store) AddStudent(ctx context.Context, student *Student) error {
@@ -51,7 +54,16 @@ func (s *Store) ListStudents(ctx context.Context) ([]*Student, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		students = append(students, st)
+	}
+
+	for _, s := range students {
+		remaining, err := calculateRemainingSeconds(*s)
+		if err != nil {
+			return nil, err
+		}
+		s.Remaining = remaining
 	}
 
 	return students, rows.Err()
@@ -151,4 +163,81 @@ func (s *Store) IncrementDoneSeconds(ctx context.Context, seconds int) error {
 	`
 	_, err := s.db.ExecContext(ctx, query, seconds)
 	return err
+}
+
+func calculateRemainingSeconds(s Student) (int, error) {
+	now := time.Now()
+	start, err := time.Parse(time.DateOnly, s.StartDate)
+	if err != nil {
+		return 0, fmt.Errorf("unable to parse start date: %s: %w", s.StartDate, err)
+	}
+	end, err := time.Parse(time.DateOnly, s.EndDate)
+	if err != nil {
+		return 0, fmt.Errorf("unable to parse end date: %s: %w", s.EndDate, err)
+	}
+
+	if !end.After(start) {
+		return 0, fmt.Errorf("start date must be greater than end date! start: %s end: %s", start, end)
+	}
+
+	excludedDays := make([]time.Time, 0, len(s.ExcludedDays))
+	for _, v := range s.ExcludedDays {
+		day, err := time.Parse(time.DateOnly, v)
+		if err != nil {
+			log.Println("failed to parse excluded", err)
+			continue
+		}
+		excludedDays = append(excludedDays, day)
+	}
+
+	type parsedDay struct {
+		duration time.Duration
+	}
+	parsedSchedule := make(map[int]parsedDay)
+
+	for weekday, day := range s.Schedule {
+		if day == nil {
+			continue
+		}
+		dayStarts, err := time.Parse(time.TimeOnly, day.Start)
+		if err != nil {
+			log.Printf("failed to parse start date for weekday %d: %v", weekday, err)
+			continue
+		}
+		dayEnds, err := time.Parse(time.TimeOnly, day.End)
+		if err != nil {
+			log.Printf("failed to parse end date for weekday %d: %v", weekday, err)
+			continue
+		}
+
+		if !dayEnds.After(dayStarts) {
+			log.Printf("schedule start time must be greater than end time. start: %s end: %s", dayStarts, dayEnds)
+			continue
+		}
+
+		diff := dayEnds.Sub(dayStarts)
+
+		parsedSchedule[weekday] = parsedDay{duration: diff}
+	}
+
+	var remaining time.Duration
+
+	for {
+		if start.After(now) || start.After(end) {
+			break
+		}
+
+		// In Go weekdays start at sundays, this shifts it to start at mondays
+		weekday := (int(start.Weekday()) + 6) % 7
+		inExcluded := slices.Contains(excludedDays, start)
+
+		if day, ok := parsedSchedule[weekday]; ok && !inExcluded {
+			remaining += day.duration - (time.Duration(s.BreakTime) * time.Second)
+		}
+
+		// TODO: dirty
+		start = start.Add(24 * time.Hour)
+	}
+
+	return int(remaining.Seconds()) - s.DoneSeconds, nil
 }

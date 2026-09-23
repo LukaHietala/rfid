@@ -80,6 +80,7 @@ type Student struct {
 	DoneSeconds  int             `json:"done_seconds"`
 	ExcludedDays JSONStringSlice `json:"excluded_days"`
 	BreakTime    int             `json:"break_time"` // in seconds
+	Remaining    int             `json:"remaining"`  // in seconds, dynamically calculated
 	CreatedAt    string          `json:"created_at"`
 }
 
