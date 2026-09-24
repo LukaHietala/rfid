@@ -37,11 +37,13 @@ func (rs devicesResource) DeviceCtx(next http.Handler) http.Handler {
 		deviceIDStr := chi.URLParam(r, "id")
 		if deviceIDStr == "" {
 			render.Render(w, r, ErrNotFound())
+			return
 		}
 
 		deviceID, err := strconv.Atoi(deviceIDStr)
 		if err != nil {
 			render.Render(w, r, ErrInternal(err))
+			return
 		}
 
 		dev, err = store.FindDeviceByID(r.Context(), deviceID)

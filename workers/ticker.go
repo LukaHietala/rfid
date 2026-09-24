@@ -25,7 +25,7 @@ func StartDoneTicker(ctx context.Context, store *db.Store, hub *websockets.Hub, 
 				continue
 			}
 
-			students, err := store.ListStudents(ctx)
+			students, err := store.ListStudents(ctx, false)
 			if err != nil {
 				log.Println("error listing students:", err)
 				continue

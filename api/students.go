@@ -26,7 +26,15 @@ func (rs studentsResource) Routes() chi.Router {
 		r.Use(rs.UserCtx)
 		r.Get("/", rs.FindOne)
 		r.Put("/", rs.Update)
-		r.Delete("/", rs.Delete)
+		r.Delete("/", rs.Archive)
+	})
+
+	r.Route("/archive", func(r chi.Router) {
+		r.Get("/", rs.ListArchived)
+		r.Route("/{id}", func(r chi.Router) {
+			r.Use(rs.UserCtx)
+			r.Delete("/", rs.Delete)
+		})
 	})
 
 	return r
@@ -40,11 +48,13 @@ func (rs studentsResource) UserCtx(next http.Handler) http.Handler {
 		studentIDStr := chi.URLParam(r, "id")
 		if studentIDStr == "" {
 			render.Render(w, r, ErrNotFound())
+			return
 		}
 
 		studentID, err := strconv.Atoi(studentIDStr)
 		if err != nil {
 			render.Render(w, r, ErrInternal(err))
+			return
 		}
 
 		student, err = store.FindStudentByID(r.Context(), studentID)
@@ -59,7 +69,7 @@ func (rs studentsResource) UserCtx(next http.Handler) http.Handler {
 }
 
 func (rs studentsResource) List(w http.ResponseWriter, r *http.Request) {
-	students, err := store.ListStudents(r.Context())
+	students, err := store.ListStudents(r.Context(), false)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
@@ -234,13 +244,12 @@ func (rs studentsResource) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	student = &req
 	if err := store.UpdateStudent(r.Context(), student.ID, &req); err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
 
-	bytes, err := json.Marshal(student)
+	bytes, err := json.Marshal(req)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
@@ -255,10 +264,10 @@ func (rs studentsResource) Update(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, student)
 }
 
-func (rs studentsResource) Delete(w http.ResponseWriter, r *http.Request) {
+func (rs studentsResource) Archive(w http.ResponseWriter, r *http.Request) {
 	student := r.Context().Value("student").(*db.Student)
 
-	err := store.DeleteStudentByID(r.Context(), student.ID)
+	err := store.ArchiveStudentByID(r.Context(), student.ID)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
@@ -274,6 +283,28 @@ func (rs studentsResource) Delete(w http.ResponseWriter, r *http.Request) {
 		Event:   "student:delete",
 		Payload: bytes,
 	})
+
+	render.Status(r, 200)
+	render.JSON(w, r, student)
+}
+
+func (rs studentsResource) ListArchived(w http.ResponseWriter, r *http.Request) {
+	students, err := store.ListStudents(r.Context(), true)
+	if err != nil {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
+	render.JSON(w, r, students)
+}
+
+func (rs studentsResource) Delete(w http.ResponseWriter, r *http.Request) {
+	student := r.Context().Value("student").(*db.Student)
+
+	err := store.DeleteStudentByID(r.Context(), student.ID)
+	if err != nil {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
 
 	render.Status(r, 200)
 	render.JSON(w, r, student)

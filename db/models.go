@@ -81,6 +81,7 @@ type Student struct {
 	ExcludedDays JSONStringSlice `json:"excluded_days"`
 	BreakTime    int             `json:"break_time"` // in seconds
 	Remaining    int             `json:"remaining"`  // in seconds, dynamically calculated
+	IsArchived   bool            `json:"is_archived"`
 	CreatedAt    string          `json:"created_at"`
 }
 

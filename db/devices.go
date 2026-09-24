@@ -78,7 +78,6 @@ func (s *Store) UpdateDevice(ctx context.Context, id int, device Device) error {
 		SET name = ?,
    			secret_key = ?
 		WHERE id = ?
-
     `
 	_, err := s.db.ExecContext(ctx, query, device.Name, device.SecretKey, id)
 	if err != nil {

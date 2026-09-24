@@ -18,6 +18,7 @@ var schema = `
         done_seconds INTEGER NOT NULL DEFAULT 0,
         excluded_days TEXT DEFAULT '[]',
         break_time INTEGER NOT NULL DEFAULT 0,
+		is_archived BOOL NOT NULL DEFAULT FALSE,
         created_at TEXT NOT NULL DEFAULT (datetime(current_timestamp, 'localtime'))
     );
 

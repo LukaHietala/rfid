@@ -38,11 +38,17 @@ func (s *Store) AddStudent(ctx context.Context, student *Student) error {
 	return nil
 }
 
-func (s *Store) ListStudents(ctx context.Context) ([]*Student, error) {
+func (s *Store) ListStudents(ctx context.Context, archived bool) ([]*Student, error) {
 	query := `
-		SELECT id, uid, name, status, start_date, end_date, schedule, done_seconds, excluded_days, break_time, created_at 
+		SELECT id, uid, name, status, start_date, end_date, schedule, done_seconds, excluded_days, break_time, is_archived, created_at 
 		FROM students
 	`
+
+	if !archived {
+		query += `WHERE is_archived = FALSE`
+	} else {
+		query += `WHERE is_archived = TRUE`
+	}
 
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
@@ -56,7 +62,7 @@ func (s *Store) ListStudents(ctx context.Context) ([]*Student, error) {
 		err := rows.Scan(
 			&st.ID, &st.UID, &st.Name, &st.Status, &st.StartDate,
 			&st.EndDate, &st.Schedule, &st.DoneSeconds,
-			&st.ExcludedDays, &st.BreakTime, &st.CreatedAt,
+			&st.ExcludedDays, &st.BreakTime, &st.IsArchived, &st.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -78,7 +84,7 @@ func (s *Store) ListStudents(ctx context.Context) ([]*Student, error) {
 
 func (s *Store) FindStudentByID(ctx context.Context, id int) (*Student, error) {
 	query := `
-		SELECT id, uid, name, status, start_date, end_date, schedule, done_seconds, excluded_days, break_time, created_at
+		SELECT id, uid, name, status, start_date, end_date, schedule, done_seconds, excluded_days, break_time, is_archived, created_at
 		FROM students
 		WHERE id = ? LIMIT 1
 	`
@@ -87,7 +93,7 @@ func (s *Store) FindStudentByID(ctx context.Context, id int) (*Student, error) {
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&st.ID, &st.UID, &st.Name, &st.Status, &st.StartDate,
 		&st.EndDate, &st.Schedule, &st.DoneSeconds,
-		&st.ExcludedDays, &st.BreakTime, &st.CreatedAt,
+		&st.ExcludedDays, &st.BreakTime, &st.IsArchived, &st.CreatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -107,7 +113,7 @@ func (s *Store) FindStudentByID(ctx context.Context, id int) (*Student, error) {
 
 func (s *Store) FindStudentByUID(ctx context.Context, uid string) (*Student, error) {
 	query := `
-		SELECT id, uid, name, status, start_date, end_date, schedule, done_seconds, excluded_days, break_time, created_at
+		SELECT id, uid, name, status, start_date, end_date, schedule, done_seconds, excluded_days, break_time, is_archived, created_at
 		FROM students
 		WHERE uid = ? LIMIT 1
 	`
@@ -116,7 +122,7 @@ func (s *Store) FindStudentByUID(ctx context.Context, uid string) (*Student, err
 	err := s.db.QueryRowContext(ctx, query, uid).Scan(
 		&st.ID, &st.UID, &st.Name, &st.Status, &st.StartDate,
 		&st.EndDate, &st.Schedule, &st.DoneSeconds,
-		&st.ExcludedDays, &st.BreakTime, &st.CreatedAt,
+		&st.ExcludedDays, &st.BreakTime, &st.IsArchived, &st.CreatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -161,11 +167,43 @@ func (s *Store) UpdateStudent(ctx context.Context, id int, student *Student) err
 	if err != nil {
 		return err
 	}
+	student.ID = id
 	student.Remaining = remaining
 
 	return nil
 }
 
+func (s *Store) ArchiveStudentByID(ctx context.Context, id int) error {
+	query := `
+		UPDATE students
+		SET is_archived = TRUE
+		WHERE id = ?
+	`
+
+	_, err := s.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Store) UnarchiveStudentByID(ctx context.Context, id int) error {
+	query := `
+		UPDATE students
+		SET is_archived = FALSE
+		WHERE id = ?
+	`
+
+	_, err := s.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Should be avoided
 func (s *Store) DeleteStudentByID(ctx context.Context, id int) error {
 	query := `
 		DELETE FROM students
