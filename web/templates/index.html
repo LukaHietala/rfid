@@ -1,0 +1,217 @@
+<!doctype html>
+<html>
+	<head>
+		<script
+			defer
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+		></script>
+        <style>
+            :root {
+                --background: #fcfcfc;
+                --border: #dbdbdb;
+                --border-dark: #bababa;
+                --border-darker: #ababab;
+                --primary: #00a4e4;
+            }
+
+
+            * {
+                font-family: sans-serif; 
+                line-height: 1.5;
+            }
+
+            body {
+                background-color: var(--background)
+            }
+
+            main {
+               max-width: 800px;
+               margin: 50px auto;
+               display: flex;
+               flex-direction: column;
+               gap: 8px
+            }
+
+            button {
+                cursor: pointer;
+                border-radius: 4px;
+            }
+
+            .list {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .item {
+                display: inline-flex;
+                justify-content: space-between;
+                background: white;
+                padding: 10px 15px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                align-items: center;
+            }
+
+            .item-actions {
+                display: inline-flex;
+                gap: 6px;
+            }
+
+            .primary-btn {
+                background-color: white;
+                border: 1px solid var(--border-dark);
+                padding: 5px 10px;
+            }
+
+            .primary-btn:hover {
+                background-color: #f5f5f5;
+                border: 1px solid var(--border-darker);
+            }
+
+            .icon-btn {
+                background-color: white;
+                border: 1px solid var(--border-dark);
+                display: flex;
+                padding: 8px;
+            }
+
+            .icon-btn:hover {
+                background-color: #f5f5f5;
+                border: 1px solid var(--border-darker);
+            }
+
+            .active {
+                border-color: #00a4e4 !important;
+            }
+
+        </style>
+	</head>
+	<body>
+        <main x-data="">
+            <h3>Oppilaat</h3>
+            <template x-if="$store.state.students.length <= 0">
+                <div class="item">Ei oppilaita</div>
+            </template>
+            <div x-show="$store.state.students.length > 0" class="list">
+                <div class="item">
+                    <div></div>
+                    <div class="item-actions">
+                        <button class="primary-btn">Massamuokkaus</button>
+                        <button class="primary-btn">Lisää oppilas</button>
+                    </div>
+                </div>
+                <template
+                    x-for="student in $store.state.students"
+                    :key="student.id"
+                >
+                    <div class="item" :class="student.status == 'IN' ? 'active' : ''">
+                        <div>
+                            <span x-text="student.name"></span>
+                            <span x-text="student.uid"></span>
+                            <span x-text="student.remaining"></span>
+                        </div>
+                        <div class="item-actions">
+                             <button class="icon-btn">
+                                <img src="/static/pen.svg" alt="Edit" />
+                            </button>
+                            <button class="icon-btn">
+                                <img src="/static/can.svg" alt="Delete" />
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <h3>Lukijat</h3>
+            <template x-if="$store.state.devices.length <= 0">
+                <div class="item">Ei lukijoita</div>
+            </template>
+            <div x-show="$store.state.devices.length > 0" class="list">
+                <div class="item">
+                    <div></div>
+                    <button class="primary-btn">Lisää laite</button>
+                </div>
+                <template
+                    x-for="device in $store.state.devices"
+                    :key="device.id"
+                >
+                    <div class="item">
+                        <div>
+                            <span x-text="device.id"></span>
+                            <span x-text="device.name"></span>
+                            <span x-text="device.secret_key"></span>
+                        </div>
+                        <div class="item-actions">
+                             <button class="icon-btn">
+                                <img src="/static/pen.svg" alt="Edit" />
+                            </button>
+                            <button class="icon-btn">
+                                <img src="/static/can.svg" alt="Delete" />
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        <main>
+	</body>
+	<script>
+		document.addEventListener("alpine:init", async () => {
+			Alpine.store("state", {
+				error: null,
+				students: [],
+                devices: [],
+
+				async init() {
+					this.students = await getStudents();
+					this.devices = await getDevices();
+				},
+			});
+
+			async function getStudents() {
+				try {
+					const response = await fetch("/api/students");
+					if (!response.ok) {
+						Alpine.store("state").error =
+							await response.json().error;
+					}
+
+					return await response.json();
+				} catch (error) {
+					console.error(error.message);
+				}
+			}
+
+			async function getDevices() {
+				try {
+					const response = await fetch("/api/devices");
+					if (!response.ok) {
+						Alpine.store("state").error =
+							await response.json().error;
+					}
+
+					return await response.json();
+				} catch (error) {
+					console.error(error.message);
+				}
+			}
+
+
+
+            const wsUri = "ws://localhost:3000/ws";
+            const websocket = new WebSocket(wsUri);
+
+            websocket.addEventListener("message", (e) => {
+                const message = JSON.parse(e.data)
+
+                switch (message.event) {
+                case "student:new":
+                    Alpine.store("state").students.push(message.payload)
+                default:
+                        console.log("unknown event")
+                }
+                console.log(event);
+            });
+
+		});
+	</script>
+</html>
