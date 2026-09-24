@@ -19,6 +19,7 @@ func StartDoneTicker(ctx context.Context, store *db.Store, hub *websockets.Hub, 
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			// Only increments if status is IN and end_date has not passed
 			if err := store.IncrementDoneSeconds(ctx, int(interval.Seconds())); err != nil {
 				log.Println("failed to increment done_seconds:", err)
 				continue

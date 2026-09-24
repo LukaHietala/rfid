@@ -28,6 +28,13 @@ func (s *Store) AddStudent(ctx context.Context, student *Student) error {
 		return err
 	}
 	student.ID = int(id)
+
+	remaining, err := calculateRemainingSeconds(*student)
+	if err != nil {
+		return err
+	}
+	student.Remaining = remaining
+
 	return nil
 }
 
@@ -89,6 +96,12 @@ func (s *Store) FindStudentByID(ctx context.Context, id int) (*Student, error) {
 		return nil, err
 	}
 
+	remaining, err := calculateRemainingSeconds(st)
+	if err != nil {
+		return nil, err
+	}
+	st.Remaining = remaining
+
 	return &st, nil
 }
 
@@ -112,10 +125,16 @@ func (s *Store) FindStudentByUID(ctx context.Context, uid string) (*Student, err
 		return nil, err
 	}
 
+	remaining, err := calculateRemainingSeconds(st)
+	if err != nil {
+		return nil, err
+	}
+	st.Remaining = remaining
+
 	return &st, nil
 }
 
-func (s *Store) UpdateStudent(ctx context.Context, id int, student Student) error {
+func (s *Store) UpdateStudent(ctx context.Context, id int, student *Student) error {
 	query := `
 		UPDATE students
 		SET uid = ?,
@@ -138,6 +157,12 @@ func (s *Store) UpdateStudent(ctx context.Context, id int, student Student) erro
 		return err
 	}
 
+	remaining, err := calculateRemainingSeconds(*student)
+	if err != nil {
+		return err
+	}
+	student.Remaining = remaining
+
 	return nil
 }
 
@@ -159,7 +184,7 @@ func (s *Store) IncrementDoneSeconds(ctx context.Context, seconds int) error {
 	query := `
 		UPDATE students 
 		SET done_seconds = done_seconds + ? 
-		WHERE status = 'IN'
+		WHERE status = 'IN' AND date(current_timestamp, 'localtime') <= end_date
 	`
 	_, err := s.db.ExecContext(ctx, query, seconds)
 	return err

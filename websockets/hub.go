@@ -1,5 +1,7 @@
 package websockets
 
+import "log"
+
 type Hub struct {
 	clients    map[*Client]bool
 	broadcast  chan Event
@@ -40,5 +42,9 @@ func (h *Hub) Run() {
 }
 
 func (h *Hub) Broadcast(ev Event) {
-	h.broadcast <- ev
+	select {
+	case h.broadcast <- ev:
+	default:
+		log.Println("broadcast chan is full, dropping")
+	}
 }

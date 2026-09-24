@@ -88,6 +88,7 @@ func (s *Server) handleConn(conn net.Conn) {
 	}
 }
 
+// https://github.com/LukaHietala/mfrc522-periph/blob/master/tcp.go#L15
 func (s *Server) processPacket(conn net.Conn) error {
 	var header [HeaderSize]byte
 	if _, err := io.ReadFull(conn, header[:]); err != nil {
@@ -148,7 +149,7 @@ func (s *Server) processPacket(conn net.Conn) error {
 func (s *Server) handleScan(ctx context.Context, uidStr string, timestamp int64) error {
 	student, err := s.store.FindStudentByUID(ctx, uidStr)
 	if err != nil {
-		return fmt.Errorf("student not found for uid %s: %w", uidStr, err)
+		return err
 	}
 
 	if student.Status == "IN" {
@@ -157,7 +158,7 @@ func (s *Server) handleScan(ctx context.Context, uidStr string, timestamp int64)
 		student.Status = "IN"
 	}
 
-	if err := s.store.UpdateStudent(ctx, student.ID, *student); err != nil {
+	if err := s.store.UpdateStudent(ctx, student.ID, student); err != nil {
 		return err
 	}
 
