@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -69,17 +70,13 @@ func (rs devicesResource) List(w http.ResponseWriter, r *http.Request) {
 func (rs devicesResource) Create(w http.ResponseWriter, r *http.Request) {
 	var dev db.Device
 	if err := render.Decode(r, &dev); err != nil {
-		render.Render(w, r, ErrInvalidRequest("Invalid json payload"))
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid json payload")))
 		return
 	}
 
-	if dev.Name == "" {
-		render.Render(w, r, ErrInvalidRequest("Device name is required"))
+	if err := dev.Validate(); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
-	}
-
-	if len(dev.Name) < 1 || len(dev.Name) > 255 {
-		render.Render(w, r, ErrInvalidRequest("Device name length needs to be in the range of 1-255"))
 	}
 
 	if err := store.AddDevice(r.Context(), &dev); err != nil {
@@ -112,17 +109,13 @@ func (rs devicesResource) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req db.Device
 	if err := render.Decode(r, &req); err != nil {
-		render.Render(w, r, ErrInvalidRequest("Invalid json payload"))
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid json payload")))
 		return
 	}
 
-	if dev.Name == "" {
-		render.Render(w, r, ErrInvalidRequest("Device name is required"))
+	if err := dev.Validate(); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
-	}
-
-	if len(dev.Name) < 1 || len(dev.Name) > 255 {
-		render.Render(w, r, ErrInvalidRequest("Device name length needs to be in the range of 1-255"))
 	}
 
 	dev = &req

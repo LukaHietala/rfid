@@ -2,12 +2,10 @@ package api
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -80,7 +78,7 @@ func (rs studentsResource) List(w http.ResponseWriter, r *http.Request) {
 func (rs studentsResource) Create(w http.ResponseWriter, r *http.Request) {
 	var s db.Student
 	if err := render.Decode(r, &s); err != nil {
-		render.Render(w, r, ErrInvalidRequest("Invalid json payload"))
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid json payload")))
 		return
 	}
 
@@ -88,65 +86,9 @@ func (rs studentsResource) Create(w http.ResponseWriter, r *http.Request) {
 		s.Status = "OUT"
 	}
 
-	decoded, err := hex.DecodeString(s.UID)
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("Invalid uid format, unable to decode string to bytes"))
+	if err := s.Validate(); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
-	}
-
-	if len(decoded) != 4 && len(decoded) != 7 {
-		render.Render(w, r, ErrInvalidRequest("RFID uid length must be either 4 or 7"))
-		return
-	}
-
-	if len(s.Name) < 1 || len(s.Name) > 255 {
-		render.Render(w, r, ErrInvalidRequest("Name length must be between 1-255"))
-		return
-	}
-
-	start, err := time.Parse(time.DateOnly, s.StartDate)
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("Start date is in invalid format"))
-		return
-	}
-
-	end, err := time.Parse(time.DateOnly, s.EndDate)
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("End date is in invalid format"))
-		return
-	}
-
-	if !end.After(start) {
-		render.Render(w, r, ErrInvalidRequest("End date must be after start date"))
-		return
-	}
-
-	for weekday, day := range s.Schedule {
-		if day == nil {
-			continue
-		}
-		dayStarts, err := time.Parse(time.TimeOnly, day.Start)
-		if err != nil {
-			render.Render(w, r, ErrInvalidRequest(fmt.Sprintf("Start time is in invalid format at weekday %d", weekday)))
-			return
-		}
-		dayEnds, err := time.Parse(time.TimeOnly, day.End)
-		if err != nil {
-			render.Render(w, r, ErrInvalidRequest(fmt.Sprintf("End time is in invalid format at weekday %d", weekday)))
-			return
-		}
-
-		if !dayEnds.After(dayStarts) {
-			render.Render(w, r, ErrInvalidRequest("End time must be after start time"))
-			return
-		}
-	}
-
-	for _, excluded := range s.ExcludedDays {
-		if _, err := time.Parse(time.DateOnly, excluded); err != nil {
-			render.Render(w, r, ErrInvalidRequest("Excluded day is in invalid format"))
-			return
-		}
 	}
 
 	if err := store.AddStudent(r.Context(), &s); err != nil {
@@ -179,69 +121,13 @@ func (rs studentsResource) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req db.Student
 	if err := render.Decode(r, &req); err != nil {
-		render.Render(w, r, ErrInvalidRequest("Invalid json payload"))
+		render.Render(w, r, ErrInvalidRequest(errors.New("invalid json payload")))
 		return
 	}
 
-	decoded, err := hex.DecodeString(req.UID)
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("Invalid uid format, unable to decode string to bytes"))
+	if err := req.Validate(); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
 		return
-	}
-
-	if len(decoded) != 4 && len(decoded) != 7 {
-		render.Render(w, r, ErrInvalidRequest("RFID uid length must be either 4 or 7"))
-		return
-	}
-
-	if len(req.Name) < 1 || len(req.Name) > 255 {
-		render.Render(w, r, ErrInvalidRequest("Name length must be between 1-255"))
-		return
-	}
-
-	start, err := time.Parse(time.DateOnly, req.StartDate)
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("Start date is in invalid format"))
-		return
-	}
-
-	end, err := time.Parse(time.DateOnly, req.EndDate)
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest("End date is in invalid format"))
-		return
-	}
-
-	if !end.After(start) {
-		render.Render(w, r, ErrInvalidRequest("End date must be after start date"))
-		return
-	}
-
-	for weekday, day := range req.Schedule {
-		if day == nil {
-			continue
-		}
-		dayStarts, err := time.Parse(time.TimeOnly, day.Start)
-		if err != nil {
-			render.Render(w, r, ErrInvalidRequest(fmt.Sprintf("Start time is in invalid format at weekday %d", weekday)))
-			return
-		}
-		dayEnds, err := time.Parse(time.TimeOnly, day.End)
-		if err != nil {
-			render.Render(w, r, ErrInvalidRequest(fmt.Sprintf("End time is in invalid format at weekday %d", weekday)))
-			return
-		}
-
-		if !dayEnds.After(dayStarts) {
-			render.Render(w, r, ErrInvalidRequest("End time must be after start time"))
-			return
-		}
-	}
-
-	for _, excluded := range req.ExcludedDays {
-		if _, err := time.Parse(time.DateOnly, excluded); err != nil {
-			render.Render(w, r, ErrInvalidRequest("Excluded day is in invalid format"))
-			return
-		}
 	}
 
 	if err := store.UpdateStudent(r.Context(), student.ID, &req); err != nil {
